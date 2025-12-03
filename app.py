@@ -5,42 +5,13 @@ import google.generativeai as genai
 import tempfile
 import os
 import requests
-import streamlit as st
-
-def process_audio(file):
-    # Your complex logic goes here
-    st.write(f"Analyzing {file.name}...")
-
-def main():
-    st.title("🎵 Music App")
-
-    # --- PLACE YOUR CODE HERE ---
-    st.sidebar.title("🎧 Input Audio")
-    uploaded_file = st.sidebar.file_uploader("Upload a song snippet", type=["mp3", "wav"])
-
-    if uploaded_file:
-        st.sidebar.audio(uploaded_file)
-        
-        # Pass the file to your processing function
-        process_audio(uploaded_file)
-    else:
-        st.write("Waiting for upload...")
-
-if __name__ == "__main__":
-    main()
-st.set_page_config(
-    page_title="SongDNA",
-    page_icon="🧬",
-    layout="wide",
-    initial_sidebar_state="expanded"
-)
 
 # --- 1. CONFIGURATION ---
 st.set_page_config(
     page_title="SunoSonic",
     page_icon="🎹",
     layout="wide",
-    initial_sidebar_state="collapsed"
+    initial_sidebar_state="expanded" # Changed to expanded so you see your new sidebar immediately
 )
 
 # --- 2. NVGT KINETIC UI (CSS) ---
@@ -211,16 +182,44 @@ def analyze_gemini(song_data):
 
 # --- 4. MAIN UI FLOW ---
 def main():
+    if 'song_data' not in st.session_state:
+        st.session_state.song_data = None
+
+    # --- SIDEBAR INPUT ---
+    st.sidebar.title("🎧 Input Audio")
+    # We use a unique key here to avoid conflict with the center uploader
+    sidebar_file = st.sidebar.file_uploader("Upload a song snippet", type=["mp3", "wav"], key="sidebar_uploader")
+
+    if sidebar_file:
+        st.sidebar.audio(sidebar_file)
+        
+        # Trigger processing ONLY if we haven't already loaded this data to avoid infinite reruns
+        # or if the user wants to override the current song
+        if st.button("Analyze Sidebar Audio", key="sidebar_btn"):
+             with st.spinner("🎧 SIDEBAR UPLOAD DETECTED... PROCESSING..."):
+                with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as tmp:
+                    tmp.write(sidebar_file.getvalue())
+                    tmp_path = tmp.name
+                
+                result = run_async(identify_song(tmp_path))
+                os.remove(tmp_path)
+                
+                if result['found']:
+                    img = run_async(fetch_artist_image(result['artist']))
+                    result['artist_bg'] = img
+                    st.session_state.song_data = result
+                    st.rerun()
+                else:
+                    st.sidebar.error("No match found.")
+
+    # --- CENTER UI ---
     st.markdown('<div class="glass-panel">', unsafe_allow_html=True)
     st.markdown('<h1>SUNOSONIC</h1>', unsafe_allow_html=True)
     st.markdown('<div class="subtitle">AI AUDIO INTELLIGENCE</div>', unsafe_allow_html=True)
 
-    if 'song_data' not in st.session_state:
-        st.session_state.song_data = None
-
-    # STATE 1: UPLOAD
+    # STATE 1: UPLOAD (Center)
     if not st.session_state.song_data:
-        uploaded_file = st.file_uploader("DROP AUDIO FILE", type=['mp3', 'wav', 'ogg'])
+        uploaded_file = st.file_uploader("DROP AUDIO FILE", type=['mp3', 'wav', 'ogg'], key="center_uploader")
         
         if uploaded_file:
             with st.spinner("🎧 LISTENING & DECODING..."):
@@ -230,44 +229,4 @@ def main():
                     tmp_path = tmp.name
                 
                 # Run the "Ear"
-                result = run_async(identify_song(tmp_path))
-                os.remove(tmp_path)
-                
-                if result['found']:
-                    # Fetch Artist Image
-                    img = run_async(fetch_artist_image(result['artist']))
-                    result['artist_bg'] = img
-                    st.session_state.song_data = result
-                    st.rerun()
-                else:
-                    st.error("NO MATCH FOUND. TRY A CLEARER CLIP.")
-
-    # STATE 2: RESULTS
-    else:
-        data = st.session_state.song_data
-        
-        # Images
-        bg_img = data.get('artist_bg') or data.get('album_art')
-        cover_img = data.get('album_art') or bg_img
-        
-        # Hero Banner
-        st.image(bg_img, use_container_width=True)
-        st.markdown(f"<h2 style='text-align:center;'>{data['artist']}</h2>", unsafe_allow_html=True)
-        st.markdown(f"<h3 style='text-align:center; color:#ccc;'>{data['title']}</h3>", unsafe_allow_html=True)
-        
-        # Reset Button
-        if st.button("⬅ SCAN NEW TRACK"):
-            st.session_state.song_data = None
-            st.rerun()
-            
-        st.markdown("---")
-        
-        # AI Analysis
-        with st.spinner("GENERATING PROMPT..."):
-            analysis = analyze_gemini(data)
-            st.info(analysis)
-
-    st.markdown('</div>', unsafe_allow_html=True)
-
-if __name__ == "__main__":
-    main()
+                result = run_async(identify_song(tmp_
