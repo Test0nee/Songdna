@@ -11,7 +11,7 @@ st.set_page_config(
     page_title="SunoSonic",
     page_icon="🎹",
     layout="wide",
-    initial_sidebar_state="expanded" # Changed to expanded so you see your new sidebar immediately
+    initial_sidebar_state="expanded"
 )
 
 # --- 2. NVGT KINETIC UI (CSS) ---
@@ -229,4 +229,45 @@ def main():
                     tmp_path = tmp.name
                 
                 # Run the "Ear"
-                result = run_async(identify_song(tmp_
+                result = run_async(identify_song(tmp_path))
+                os.remove(tmp_path)
+                
+                if result['found']:
+                    # Fetch Artist Image
+                    img = run_async(fetch_artist_image(result['artist']))
+                    result['artist_bg'] = img
+                    st.session_state.song_data = result
+                    st.rerun()
+                else:
+                    st.error("NO MATCH FOUND. TRY A CLEARER CLIP.")
+
+    # STATE 2: RESULTS
+    else:
+        data = st.session_state.song_data
+        
+        # Images
+        bg_img = data.get('artist_bg') or data.get('album_art')
+        
+        # Hero Banner
+        if bg_img:
+            st.image(bg_img, use_container_width=True)
+            
+        st.markdown(f"<h2 style='text-align:center;'>{data['artist']}</h2>", unsafe_allow_html=True)
+        st.markdown(f"<h3 style='text-align:center; color:#ccc;'>{data['title']}</h3>", unsafe_allow_html=True)
+        
+        # Reset Button
+        if st.button("⬅ SCAN NEW TRACK"):
+            st.session_state.song_data = None
+            st.rerun()
+            
+        st.markdown("---")
+        
+        # AI Analysis
+        with st.spinner("GENERATING PROMPT..."):
+            analysis = analyze_gemini(data)
+            st.info(analysis)
+
+    st.markdown('</div>', unsafe_allow_html=True)
+
+if __name__ == "__main__":
+    main()
