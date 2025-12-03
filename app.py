@@ -94,13 +94,27 @@ st.markdown("""
     /* LYRIC STUDIO */
     .lyric-area textarea { background: #080808 !important; color: #ccc !important; border: 1px solid #333 !important; font-family: 'Inter', sans-serif; }
     .lyric-output { background: #080808; border: 1px solid #333; padding: 20px; border-radius: 12px; font-family: 'JetBrains Mono', monospace; white-space: pre-wrap; color: #a78bfa; height: 300px; overflow-y: auto; }
+    
+    /* TAGS GUIDE */
+    .tag-category { margin-bottom: 15px; }
+    .tag-category h4 { color: #888; font-size: 0.8rem; text-transform: uppercase; margin-bottom: 8px; }
+    .tag-chip { display: inline-block; background: #222; padding: 4px 8px; border-radius: 4px; font-size: 0.75rem; color: #ccc; margin: 0 4px 4px 0; border: 1px solid #333; cursor: pointer; }
+    .tag-chip:hover { border-color: #666; color: #fff; }
 
     /* UPLOAD */
     .upload-area { border: 2px dashed #333; border-radius: 20px; padding: 60px; text-align: center; }
     </style>
 """, unsafe_allow_html=True)
 
-# --- 3. LOGIC & HELPERS ---
+# --- 3. SUNO KNOWLEDGE BASE ---
+SUNO_TAGS = {
+    "Structure": ["[Intro]", "[Verse]", "[Chorus]", "[Pre-Chorus]", "[Bridge]", "[Outro]", "[Drop]", "[Build]", "[Instrumental Break]", "[Hook]", "[Solo]"],
+    "Mood": ["Uplifting", "Melancholic", "Dark", "Euphoric", "Chill", "Aggressive", "Dreamy", "Nostalgic", "Epic", "Mysterious"],
+    "Vocals": ["[Male Vocals]", "[Female Vocals]", "[Duet]", "[Choir]", "[Whispered]", "[Belting]", "[Auto-tune]", "[Spoken Word]", "[Rapping]"],
+    "Production": ["[Reverb]", "[Delay]", "[Lo-fi]", "[Acoustic]", "[Synthesizer]", "[Bass Boosted]", "[Orchestral]", "[Minimal]"]
+}
+
+# --- 4. LOGIC & HELPERS ---
 
 api_key = st.secrets.get("GEMINI_API_KEY")
 if api_key:
@@ -186,20 +200,26 @@ def format_lyrics_with_tags(raw_lyrics, song_analysis):
     The user wants to create a song in the style of:
     Genre: {song_analysis.get('genre', 'Pop')}
     Mood: {song_analysis.get('mood', 'General')}
-    Instruments: {song_analysis.get('instruments', [])}
+    
+    OFFICIAL SUNO TAGS TO USE:
+    Structure: {', '.join(SUNO_TAGS['Structure'])}
+    Moods: {', '.join(SUNO_TAGS['Mood'])}
+    Vocals: {', '.join(SUNO_TAGS['Vocals'])}
     
     TASK:
-    Take the user's raw lyrics below and insert appropriate Suno Meta Tags to structure the song exactly like the genre above.
-    Examples of tags: [Verse 1], [Chorus], [Build], [Drop], [Bridge], [Outro], [Instrumental Break].
+    Take the user's raw lyrics below and insert appropriate Suno Meta Tags (in square brackets) to structure the song exactly like the genre above.
     
-    If it's EDM, use [Build] and [Drop].
-    If it's Hip Hop, use [Verse] and [Hook].
+    RULES:
+    1. If it's EDM/Dance, use [Build] and [Drop] instead of Chorus where appropriate.
+    2. If it's Hip Hop, use [Hook] and [Verse].
+    3. Use vocal tags like [Whispered] or [Female Vocals] to guide the delivery.
+    4. Keep the original lyrics intact, just add tags.
     
     USER LYRICS:
     "{raw_lyrics}"
     
     OUTPUT:
-    Return ONLY the lyrics with the tags inserted. Do not rewrite the words unless necessary for structure.
+    Return ONLY the lyrics with the tags inserted.
     """
     try:
         response = model.generate_content(prompt)
@@ -207,7 +227,7 @@ def format_lyrics_with_tags(raw_lyrics, song_analysis):
     except Exception as e:
         return f"Error: {e}"
 
-# --- 4. MAIN APPLICATION ---
+# --- 5. MAIN APPLICATION ---
 def main():
     if 'song_data' not in st.session_state:
         st.session_state.song_data = None
@@ -322,6 +342,12 @@ def main():
             st.caption("PASTE RAW LYRICS HERE")
             raw_input = st.text_area("raw", height=300, placeholder="I walked down the street\nThe lights were low...", label_visibility="collapsed", key="raw_lyrics_input")
             
+            # --- CHEAT SHEET ---
+            with st.expander("📚 Suno Meta Tags Reference"):
+                for cat, tags in SUNO_TAGS.items():
+                    st.markdown(f"**{cat}**")
+                    st.markdown(" ".join([f"`{t}`" for t in tags]))
+
             if st.button("✨ APPLY SUNO META TAGS", use_container_width=True):
                 if raw_input:
                     with st.spinner("AI is structuring your lyrics based on the song style..."):
