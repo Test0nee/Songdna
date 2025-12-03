@@ -274,7 +274,6 @@ async def fetch_artist_image(artist):
     if not artist: return "https://images.unsplash.com/photo-1514525253440-b393452e8d26?w=1200"
     clean_artist = artist.split(',')[0].split('&')[0].split('feat')[0].strip()
     try:
-        # Use Deezer API to get artist picture
         url = f"https://api.deezer.com/search/artist?q={clean_artist}"
         r = requests.get(url, timeout=5)
         data = r.json()
@@ -304,7 +303,6 @@ async def identify_song(file_path):
 def analyze_gemini_json(song_data):
     if not api_key: return None
     
-    # Try 2.5, fallback to 1.5
     try:
         model = genai.GenerativeModel('gemini-2.5-flash')
     except:
@@ -345,7 +343,6 @@ def main():
     if not st.session_state.song_data:
         uploaded_file = st.file_uploader(" ", type=['mp3', 'wav', 'ogg'])
         
-        # Custom Placeholder Text using Markdown above the invisible uploader labels
         if not uploaded_file:
             st.info("👆 DROP AUDIO FILE ABOVE TO BEGIN")
 
@@ -388,21 +385,17 @@ def main():
             </div>
         """, unsafe_allow_html=True)
         
-        # Audio Player (Standard Streamlit)
         st.audio(data.get('album_art') or "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3", format='audio/mp3')
-
         st.markdown("<br>", unsafe_allow_html=True)
 
         # 2. ANALYSIS GRID
         col1, col2 = st.columns(2)
         
-        # LEFT: SONIC PROFILE (Cyan Theme)
+        # LEFT: SONIC PROFILE
         with col1:
             st.markdown(f"""
                 <div class="glass-panel glow-cyan">
-                    <div class="panel-header">
-                        <span style="color:#38bdf8">⚡</span> SONIC PROFILE
-                    </div>
+                    <div class="panel-header"><span style="color:#38bdf8">⚡</span> SONIC PROFILE</div>
                     <div class="stat-grid">
                         <div class="stat-box">
                             <div class="stat-label">MOOD</div>
@@ -419,13 +412,11 @@ def main():
                 </div>
             """, unsafe_allow_html=True)
 
-        # RIGHT: VOCAL ARCHITECTURE (Pink Theme)
+        # RIGHT: VOCAL ARCHITECTURE
         with col2:
             st.markdown(f"""
                 <div class="glass-panel glow-pink">
-                    <div class="panel-header">
-                        <span style="color:#ec4899">🎙</span> VOCAL ARCHITECTURE
-                    </div>
+                    <div class="panel-header"><span style="color:#ec4899">🎙</span> VOCAL ARCHITECTURE</div>
                     <div class="stat-grid">
                         <div class="stat-box">
                             <div class="stat-label">TYPE</div>
@@ -444,33 +435,38 @@ def main():
         
         st.markdown("<br>", unsafe_allow_html=True)
 
-        # 3. PROMPT & TIPS ROW
+        # 3. STRUCTURAL DYNAMICS & RMS (THE VISUALIZER)
+        st.markdown(f"""
+            <div class="glass-panel" style="border-top: 1px solid rgba(255,255,255,0.1);">
+                <div class="panel-header">🎼 STRUCTURAL DYNAMICS & RMS</div>
+            </div>
+        """, unsafe_allow_html=True)
+        
+        # Generate fake waveform data for aesthetics
+        chart_data = pd.DataFrame(
+            np.random.randn(80, 3),
+            columns=['L', 'R', 'RMS']
+        )
+        st.area_chart(chart_data, height=120, color=["#38bdf8", "#ec4899", "#8b5cf6"])
+        
+        st.markdown("<br>", unsafe_allow_html=True)
+
+        # 4. PROMPT & TIPS
         p_col, t_col = st.columns([1.5, 1])
         
         with p_col:
             st.markdown(f"""
                 <div class="glass-panel glow-purple">
-                    <div class="panel-header">
-                        <span style="color:#a855f7">🎹</span> SUNO AI STYLE PROMPT
-                    </div>
-                    <div class="prompt-container">
-                        {ai.get('suno_prompt', 'Generating prompt...')}
-                    </div>
-                    <div style="margin-top:10px; font-size:0.75rem; color:#666;">
-                        COPY THIS PROMPT DIRECTLY INTO SUNO V3
-                    </div>
+                    <div class="panel-header"><span style="color:#a855f7">🎹</span> SUNO AI STYLE PROMPT</div>
+                    <div class="prompt-container">{ai.get('suno_prompt', 'Generating...')}</div>
+                    <div style="margin-top:10px; font-size:0.75rem; color:#666;">COPY THIS PROMPT DIRECTLY INTO SUNO V3</div>
                 </div>
             """, unsafe_allow_html=True)
 
         with t_col:
             tips_html = ""
             for i, tip in enumerate(ai.get('tips', [])):
-                tips_html += f"""
-                <div class="tip-item">
-                    <div class="tip-num">{i+1}</div>
-                    <div class="tip-text">{tip}</div>
-                </div>
-                """
+                tips_html += f'<div class="tip-item"><div class="tip-num">{i+1}</div><div class="tip-text">{tip}</div></div>'
             
             st.markdown(f"""
                 <div class="glass-panel">
@@ -479,19 +475,7 @@ def main():
                 </div>
             """, unsafe_allow_html=True)
 
-        # 4. LYRIC STUDIO PLACEHOLDER
-        st.markdown("<br>", unsafe_allow_html=True)
-        st.markdown(f"""
-            <div class="glass-panel" style="border: 1px dashed #333; text-align:center; padding: 40px;">
-                <h3 style="margin:0; color:#fff;">LYRIC STUDIO</h3>
-                <p style="color:#666; font-size:0.8rem; margin-bottom:20px;">GENERATE LYRICS MATCHING THIS STYLE</p>
-                <div style="display:inline-block; padding: 10px 20px; background:#222; border-radius:8px; color:#555; font-size:0.8rem;">
-                    COMING SOON
-                </div>
-            </div>
-        """, unsafe_allow_html=True)
-
-        # 5. RESET BUTTON
+        # 5. RESET
         st.markdown("<br>", unsafe_allow_html=True)
         if st.button("⬅ ANALYZE NEW TRACK", use_container_width=True):
             st.session_state.song_data = None
