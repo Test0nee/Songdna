@@ -9,6 +9,7 @@ import json
 import random
 import pandas as pd
 import numpy as np
+import librosa
 
 # --- 1. CONFIGURATION ---
 st.set_page_config(
@@ -106,7 +107,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# --- 3. SUNO KNOWLEDGE BASE ---
+# --- 3. KNOWLEDGE BASE ---
 SUNO_TAGS = {
     "Structure": ["[Intro]", "[Verse]", "[Chorus]", "[Pre-Chorus]", "[Bridge]", "[Outro]", "[Drop]", "[Build]", "[Instrumental Break]", "[Hook]", "[Solo]"],
     "Mood": ["Uplifting", "Melancholic", "Dark", "Euphoric", "Chill", "Aggressive", "Dreamy", "Nostalgic", "Epic", "Mysterious"],
@@ -141,6 +142,50 @@ async def fetch_artist_image(artist):
         return "https://images.unsplash.com/photo-1514525253440-b393452e8d26?w=1200"
     return "https://images.unsplash.com/photo-1514525253440-b393452e8d26?w=1200"
 
+# --- NEW: LIBROSA AUDIO ANALYSIS ENGINE ---
+def extract_audio_features(file_path):
+    """
+    This is the 'Doctor' function. It examines the raw audio DNA.
+    """
+    try:
+        # Load audio (first 60 seconds for speed)
+        y, sr = librosa.load(file_path, duration=60)
+        
+        # 1. TEMPO (BPM)
+        tempo, _ = librosa.beat.beat_track(y=y, sr=sr)
+        bpm = round(float(tempo))
+        
+        # 2. KEY DETECTION (Simple Chromagram correlation)
+        chroma = librosa.feature.chroma_cqt(y=y, sr=sr)
+        chroma_vals = np.sum(chroma, axis=1)
+        pitches = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']
+        key_idx = np.argmax(chroma_vals)
+        key = pitches[key_idx]
+        
+        # 3. SPECTRAL CENTROID (Brightness/Timbre)
+        spectral_centroids = librosa.feature.spectral_centroid(y=y, sr=sr)[0]
+        avg_centroid = np.mean(spectral_centroids)
+        if avg_centroid > 3000: brightness = "Bright / Aggressive"
+        elif avg_centroid > 2000: brightness = "Balanced"
+        else: brightness = "Dark / Mellow"
+        
+        # 4. RMS ENERGY (Loudness/Intensity)
+        rms = librosa.feature.rms(y=y)[0]
+        avg_energy = np.mean(rms)
+        if avg_energy > 0.1: intensity = "High Energy"
+        elif avg_energy > 0.05: intensity = "Moderate Energy"
+        else: intensity = "Low / Chill"
+
+        return {
+            "success": True,
+            "bpm": f"{bpm} BPM",
+            "key": key,
+            "timbre": brightness,
+            "energy": intensity
+        }
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
 async def identify_song(file_path):
     shazam = Shazam()
     try:
@@ -149,6 +194,7 @@ async def identify_song(file_path):
             track = out['track']
             return {
                 "found": True,
+                "source": "shazam",
                 "title": track.get('title'),
                 "artist": track.get('subtitle'),
                 "album_art": track.get('images', {}).get('coverart'),
@@ -164,21 +210,51 @@ def analyze_gemini_json(song_data):
         model = genai.GenerativeModel('gemini-2.5-flash')
     except:
         model = genai.GenerativeModel('gemini-1.5-flash')
+    
+    # --- LOGIC BRANCHING ---
+    if song_data.get('source') == 'librosa':
+        # Unknown Song Analysis Logic
+        prompt = f"""
+        Analyze these raw audio statistics from an UNKNOWN song.
+        
+        AUDIO DNA:
+        - Tempo: {song_data.get('bpm')}
+        - Estimated Key: {song_data.get('key')}
+        - Timbre Profile: {song_data.get('timbre')}
+        - Energy Level: {song_data.get('energy')}
+        
+        Based on these stats, DEDUCE the likely genre and style.
+        (e.g., 128BPM + High Energy usually means EDM/House. 80BPM + Dark usually means HipHop or LoFi).
+        
+        Return pure JSON:
+        {{
+            "mood": "Duced Mood",
+            "key": "{song_data.get('key')} (Estimated)",
+            "tempo": "{song_data.get('bpm')}",
+            "instruments": ["Guess suitable instruments"],
+            "vocal_type": "Suggest vocal style",
+            "vocal_style": "Suggest processing",
+            "suno_prompt": "Genre, Tempo, Key Instruments, Vocal Style",
+            "tips": ["Tip based on high energy", "Tip based on key"]
+        }}
+        """
+    else:
+        # Standard Metadata Logic
+        prompt = f"""
+        Analyze the song "{song_data['title']}" by "{song_data['artist']}".
+        Return pure JSON.
+        {{
+            "mood": "Single Word",
+            "key": "Key",
+            "tempo": "BPM",
+            "instruments": ["List"],
+            "vocal_type": "Type",
+            "vocal_style": "Desc",
+            "suno_prompt": "Genre, Tempo, Instruments, Vocal Style",
+            "tips": ["Tip 1", "Tip 2", "Tip 3"]
+        }}
+        """
 
-    prompt = f"""
-    Analyze the song "{song_data['title']}" by "{song_data['artist']}".
-    Return pure JSON. No markdown.
-    {{
-        "mood": "Single Word (e.g. Euphoric)",
-        "key": "e.g. C# Minor",
-        "tempo": "e.g. 128 BPM",
-        "instruments": ["Synth", "Bass", "Drums"],
-        "vocal_type": "Male / Female / Choir",
-        "vocal_style": "Short description",
-        "suno_prompt": "Genre, Tempo, Instruments, Vocal Style",
-        "tips": ["Tip 1", "Tip 2", "Tip 3"]
-    }}
-    """
     try:
         response = model.generate_content(prompt)
         clean_text = response.text.replace('```json', '').replace('```', '').strip()
@@ -195,31 +271,11 @@ def format_lyrics_with_tags(raw_lyrics, song_analysis):
         
     prompt = f"""
     Act as a Suno.ai Meta-Tagging Expert.
-    
-    CONTEXT:
-    The user wants to create a song in the style of:
-    Genre: {song_analysis.get('genre', 'Pop')}
-    Mood: {song_analysis.get('mood', 'General')}
-    
-    OFFICIAL SUNO TAGS TO USE:
-    Structure: {', '.join(SUNO_TAGS['Structure'])}
-    Moods: {', '.join(SUNO_TAGS['Mood'])}
-    Vocals: {', '.join(SUNO_TAGS['Vocals'])}
-    
-    TASK:
-    Take the user's raw lyrics below and insert appropriate Suno Meta Tags (in square brackets) to structure the song exactly like the genre above.
-    
-    RULES:
-    1. If it's EDM/Dance, use [Build] and [Drop] instead of Chorus where appropriate.
-    2. If it's Hip Hop, use [Hook] and [Verse].
-    3. Use vocal tags like [Whispered] or [Female Vocals] to guide the delivery.
-    4. Keep the original lyrics intact, just add tags.
-    
-    USER LYRICS:
-    "{raw_lyrics}"
-    
-    OUTPUT:
-    Return ONLY the lyrics with the tags inserted.
+    CONTEXT: Genre: {song_analysis.get('genre', 'Pop')}, Mood: {song_analysis.get('mood', 'General')}
+    OFFICIAL TAGS: {SUNO_TAGS}
+    TASK: Insert tags (e.g., [Verse], [Chorus]) into lyrics.
+    LYRICS: "{raw_lyrics}"
+    OUTPUT: Return ONLY lyrics with tags.
     """
     try:
         response = model.generate_content(prompt)
@@ -235,7 +291,7 @@ def main():
     if 'formatted_lyrics' not in st.session_state:
         st.session_state.formatted_lyrics = ""
 
-    # HEADER LOGO
+    # HEADER
     st.markdown("<h1 style='text-align:center; letter-spacing:-2px; margin-bottom:0;'>SUNOSONIC</h1>", unsafe_allow_html=True)
     st.markdown("<p style='text-align:center; color:#555; font-size:0.8rem; letter-spacing:4px; margin-bottom:40px;'>AI AUDIO INTELLIGENCE</p>", unsafe_allow_html=True)
 
@@ -247,21 +303,48 @@ def main():
             st.info("👆 DROP AUDIO FILE ABOVE TO BEGIN")
 
         if uploaded_file:
-            with st.spinner("🎧 ANALYZING AUDIO SPECTRUM..."):
+            with st.spinner("🎧 ANALYZING AUDIO DNA..."):
                 with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as tmp:
                     tmp.write(uploaded_file.getvalue())
                     tmp_path = tmp.name
                 
+                # 1. TRY SHAZAM (Fast Path)
                 result = run_async(identify_song(tmp_path))
-                os.remove(tmp_path)
                 
-                if result['found']:
+                # 2. IF SHAZAM FAILS -> USE LIBROSA (Deep Analysis)
+                if not result['found']:
+                    st.toast("Metadata not found. Engaging Deep Audio Scan...", icon="🧬")
+                    audio_stats = extract_audio_features(tmp_path)
+                    
+                    if audio_stats['success']:
+                        result = {
+                            "found": True,
+                            "source": "librosa",
+                            "title": "Unknown Track (Deep Scan)",
+                            "artist": "Audio Fingerprint",
+                            "album_art": "https://images.unsplash.com/photo-1511379938547-c1f69419868d?w=1200", # Generic waveform image
+                            "genre": "Analyzing Signal...",
+                            "bpm": audio_stats['bpm'],
+                            "key": audio_stats['key'],
+                            "timbre": audio_stats['timbre'],
+                            "energy": audio_stats['energy']
+                        }
+                    else:
+                        st.error("Audio file is corrupted or unreadable.")
+                        os.remove(tmp_path)
+                        return
+
+                # 3. FETCH VISUALS (If Artist Known)
+                if result['source'] == 'shazam':
                     result['artist_bg'] = run_async(fetch_artist_image(result['artist']))
-                    st.session_state.song_data = result
-                    st.session_state.analysis = analyze_gemini_json(result)
-                    st.rerun()
                 else:
-                    st.error("Could not identify track. Please try a clearer snippet.")
+                    result['artist_bg'] = "https://images.unsplash.com/photo-1478737270239-2f02b77ac6d5?w=1200" # Generic Studio bg
+
+                # 4. RUN GEMINI BRAIN
+                st.session_state.song_data = result
+                st.session_state.analysis = analyze_gemini_json(result)
+                os.remove(tmp_path)
+                st.rerun()
 
     # --- STATE 2: DASHBOARD ---
     else:
@@ -273,19 +356,21 @@ def main():
             <div class="hero-wrapper">
                 <img src="{data['artist_bg']}" class="hero-bg">
                 <div class="hero-overlay">
-                    <div><span class="verified-badge">✓ Verified Artist</span></div>
+                    <div><span class="verified-badge">✓ {data['source'].upper()} ANALYSIS</span></div>
                     <div class="artist-title">{data['artist']}</div>
                     <div class="song-subtitle">{data['title']}</div>
                     <div class="meta-tags">
-                        <span class="meta-pill">🎵 {data['genre']}</span>
-                        <span class="meta-pill">⏱ {ai.get('tempo', '-- BPM')}</span>
-                        <span class="meta-pill">🎹 {ai.get('key', '--')}</span>
+                        <span class="meta-pill">🎵 {data.get('genre', ai.get('mood', 'Unknown'))}</span>
+                        <span class="meta-pill">⏱ {ai.get('tempo', data.get('bpm', '--'))}</span>
+                        <span class="meta-pill">🎹 {ai.get('key', data.get('key', '--'))}</span>
                     </div>
                 </div>
             </div>
         """, unsafe_allow_html=True)
         
-        st.audio(data.get('album_art') or "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3", format='audio/mp3')
+        if data.get('album_art') and 'http' in data['album_art']:
+            st.audio(data['album_art'], format='audio/mp3')
+
         st.markdown("<br>", unsafe_allow_html=True)
 
         # ANALYSIS GRID
@@ -296,7 +381,7 @@ def main():
                     <div class="panel-header"><span style="color:#38bdf8">⚡</span> SONIC PROFILE</div>
                     <div class="stat-grid">
                         <div class="stat-box"><div class="stat-label">MOOD</div><div class="stat-value">{ai.get('mood', '-')}</div></div>
-                         <div class="stat-box"><div class="stat-label">GENRE</div><div class="stat-value">{data['genre']}</div></div>
+                         <div class="stat-box"><div class="stat-label">ENERGY</div><div class="stat-value">{data.get('energy', 'AI Calculated')}</div></div>
                     </div>
                     <div style="margin-top:15px">{''.join([f'<span class="small-tag">{inst}</span>' for inst in ai.get('instruments', [])])}</div>
                 </div>
@@ -317,7 +402,9 @@ def main():
         # VISUALIZER
         st.markdown("<br>", unsafe_allow_html=True)
         st.markdown(f'<div class="glass-panel" style="border-top: 1px solid rgba(255,255,255,0.1);"><div class="panel-header">🎼 STRUCTURAL DYNAMICS & RMS</div></div>', unsafe_allow_html=True)
-        chart_data = pd.DataFrame(np.random.randn(80, 3), columns=['L', 'R', 'RMS'])
+        # Dynamic Chart: If high energy, make chart spikier
+        spikiness = 2.0 if "High" in data.get('energy', '') else 0.5
+        chart_data = pd.DataFrame(np.random.randn(80, 3) * spikiness, columns=['L', 'R', 'RMS'])
         st.area_chart(chart_data, height=120, color=["#38bdf8", "#ec4899", "#8b5cf6"])
         
         st.markdown("<br>", unsafe_allow_html=True)
@@ -331,18 +418,16 @@ def main():
             tips_html = "".join([f'<div class="tip-item"><div class="tip-num">{i+1}</div><div>{tip}</div></div>' for i, tip in enumerate(ai.get('tips', []))])
             st.markdown(f'<div class="glass-panel"><div class="panel-header">💡 PRO TIPS</div>{tips_html}</div>', unsafe_allow_html=True)
 
-        # --- LYRIC STUDIO ---
+        # LYRIC STUDIO
         st.markdown("<br>", unsafe_allow_html=True)
         st.markdown('<div class="glass-panel glow-purple" style="border: 1px solid #4c1d95;">', unsafe_allow_html=True)
         st.markdown('<div class="panel-header">📝 LYRIC STUDIO <span class="small-tag" style="margin-left:10px; color:#a78bfa; border-color:#a78bfa;">AUTO-TAGGER</span></div>', unsafe_allow_html=True)
         
         l_col1, l_col2 = st.columns(2)
-        
         with l_col1:
             st.caption("PASTE RAW LYRICS HERE")
-            raw_input = st.text_area("raw", height=300, placeholder="I walked down the street\nThe lights were low...", label_visibility="collapsed", key="raw_lyrics_input")
+            raw_input = st.text_area("raw", height=300, placeholder="Type lyrics...", label_visibility="collapsed", key="raw_lyrics_input")
             
-            # --- CHEAT SHEET ---
             with st.expander("📚 Suno Meta Tags Reference"):
                 for cat, tags in SUNO_TAGS.items():
                     st.markdown(f"**{cat}**")
@@ -354,12 +439,11 @@ def main():
                         st.session_state.formatted_lyrics = format_lyrics_with_tags(raw_input, ai)
         
         with l_col2:
-            st.caption("FORMATTED OUTPUT (READY FOR SUNO)")
+            st.caption("FORMATTED OUTPUT")
             if st.session_state.formatted_lyrics:
                 st.code(st.session_state.formatted_lyrics, language="markdown", line_numbers=False)
             else:
                 st.markdown('<div class="lyric-output" style="color:#555; display:flex; align-items:center; justify-content:center;">Result will appear here...</div>', unsafe_allow_html=True)
-
         st.markdown('</div>', unsafe_allow_html=True)
 
         # RESET
