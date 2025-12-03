@@ -3,4 +3,4 @@ shazamio
 google-generativeai
 ffmpeg-python
 requests
-pyaudioop
+audioop-lts
