@@ -1,0 +1,5 @@
+streamlit
+shazamio
+google-generativeai
+ffmpeg-python
+requests
