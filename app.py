@@ -6,6 +6,13 @@ import tempfile
 import os
 import requests
 
+st.set_page_config(
+    page_title="SongDNA",
+    page_icon="🧬",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
+
 # --- 1. CONFIGURATION ---
 st.set_page_config(
     page_title="SunoSonic",
