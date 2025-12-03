@@ -21,7 +21,6 @@ st.set_page_config(
 # --- 2. ULTRA-MODERN UI (CSS) ---
 st.markdown("""
     <style>
-    /* IMPORT FONTS */
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&family=JetBrains+Mono:wght@400;700&display=swap');
     
     /* GLOBAL THEME */
@@ -34,21 +33,15 @@ st.markdown("""
         color: #ffffff;
     }
     
-    /* RESET STREAMLIT PADDING */
     .block-container {
         padding-top: 1rem !important;
         padding-bottom: 5rem !important;
         max-width: 1100px !important;
     }
     
-    /* HIDE STREAMLIT ELEMENTS */
-    header[data-testid="stHeader"] {display: none;}
-    footer {display: none;}
-    [data-testid="stSidebar"] {display: none;}
+    header[data-testid="stHeader"], footer, [data-testid="stSidebar"] {display: none;}
     
-    /* -----------------------
-       HERO SECTION 
-       ----------------------- */
+    /* HERO SECTION */
     .hero-wrapper {
         position: relative;
         border-radius: 24px;
@@ -58,201 +51,52 @@ st.markdown("""
         border: 1px solid rgba(255,255,255,0.05);
         height: 380px;
     }
-    
-    .hero-bg {
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-        transition: transform 0.5s ease;
-    }
-    
+    .hero-bg { width: 100%; height: 100%; object-fit: cover; }
     .hero-overlay {
-        position: absolute;
-        inset: 0;
+        position: absolute; inset: 0;
         background: linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.6) 50%, #050505 100%);
-        display: flex;
-        flex-direction: column;
-        justify-content: flex-end;
-        padding: 40px;
+        display: flex; flex-direction: column; justify-content: flex-end; padding: 40px;
     }
     
     .verified-badge {
-        background: rgba(56, 189, 248, 0.2);
-        color: #38bdf8;
-        border: 1px solid rgba(56, 189, 248, 0.4);
-        padding: 6px 12px;
-        border-radius: 100px;
-        font-size: 0.75rem;
-        font-weight: 700;
-        letter-spacing: 1px;
-        text-transform: uppercase;
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-        margin-bottom: 15px;
+        background: rgba(56, 189, 248, 0.2); color: #38bdf8;
+        border: 1px solid rgba(56, 189, 248, 0.4); padding: 6px 12px;
+        border-radius: 100px; font-size: 0.75rem; font-weight: 700;
+        text-transform: uppercase; display: inline-flex; align-items: center; gap: 6px;
         backdrop-filter: blur(10px);
     }
-    
-    .artist-title {
-        font-size: 5rem;
-        font-weight: 900;
-        line-height: 0.9;
-        margin-bottom: 5px;
-        letter-spacing: -3px;
-        background: linear-gradient(to right, #fff, #aaa);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-    }
-    
-    .song-subtitle {
-        font-size: 2rem;
-        font-weight: 400;
-        color: #94a3b8;
-        margin-bottom: 25px;
-        letter-spacing: -1px;
-    }
-    
-    .meta-tags {
-        display: flex;
-        gap: 10px;
-        align-items: center;
-    }
-    
-    .meta-pill {
-        background: rgba(255,255,255,0.08);
-        border: 1px solid rgba(255,255,255,0.1);
-        padding: 8px 16px;
-        border-radius: 50px;
-        font-size: 0.85rem;
-        color: #e2e8f0;
-        backdrop-filter: blur(5px);
-    }
-    
-    /* -----------------------
-       GLASS CARDS
-       ----------------------- */
+    .artist-title { font-size: 5rem; font-weight: 900; line-height: 0.9; margin: 10px 0; letter-spacing: -3px; background: linear-gradient(to right, #fff, #aaa); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .song-subtitle { font-size: 2rem; color: #94a3b8; margin-bottom: 25px; letter-spacing: -1px; }
+    .meta-pill { background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.1); padding: 8px 16px; border-radius: 50px; font-size: 0.85rem; color: #e2e8f0; margin-right: 10px; }
+
+    /* GLASS PANELS */
     .glass-panel {
-        background: #0a0a0a;
-        border: 1px solid #1f1f1f;
-        border-radius: 20px;
-        padding: 24px;
-        height: 100%;
-        position: relative;
-        overflow: hidden;
+        background: #0a0a0a; border: 1px solid #1f1f1f;
+        border-radius: 20px; padding: 24px; height: 100%; position: relative;
     }
-    
     .glow-cyan { box-shadow: 0 0 40px -10px rgba(56, 189, 248, 0.1); border-top: 1px solid rgba(56, 189, 248, 0.2); }
     .glow-pink { box-shadow: 0 0 40px -10px rgba(236, 72, 153, 0.1); border-top: 1px solid rgba(236, 72, 153, 0.2); }
     .glow-purple { box-shadow: 0 0 40px -10px rgba(168, 85, 247, 0.1); border-top: 1px solid rgba(168, 85, 247, 0.2); }
     
-    .panel-header {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        margin-bottom: 20px;
-        font-size: 0.8rem;
-        font-weight: 700;
-        letter-spacing: 2px;
-        text-transform: uppercase;
-        color: #64748b;
-    }
+    .panel-header { display: flex; align-items: center; gap: 10px; margin-bottom: 20px; font-size: 0.8rem; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: #64748b; }
     
-    .stat-grid {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 15px;
-    }
+    .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+    .stat-box { background: rgba(255,255,255,0.03); padding: 15px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.03); }
+    .stat-label { font-size: 0.7rem; color: #64748b; margin-bottom: 4px; letter-spacing: 1px; }
+    .stat-value { font-size: 1.1rem; font-weight: 600; color: #fff; }
+    .small-tag { font-size: 0.75rem; padding: 4px 10px; background: #1e1e1e; border-radius: 6px; color: #aaa; border: 1px solid #333; margin-right: 5px; }
+
+    /* PROMPT BOX */
+    .prompt-container { font-family: 'JetBrains Mono', monospace; background: #050505; border: 1px solid #333; color: #22d3ee; padding: 20px; border-radius: 12px; font-size: 0.9rem; line-height: 1.6; }
+    .tip-item { display: flex; gap: 15px; margin-bottom: 15px; }
+    .tip-num { background: #222; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; border-radius: 50%; font-size: 0.7rem; }
     
-    .stat-box {
-        background: rgba(255,255,255,0.03);
-        padding: 15px;
-        border-radius: 12px;
-        border: 1px solid rgba(255,255,255,0.03);
-    }
-    
-    .stat-label {
-        font-size: 0.7rem;
-        text-transform: uppercase;
-        color: #64748b;
-        margin-bottom: 4px;
-        letter-spacing: 1px;
-    }
-    
-    .stat-value {
-        font-size: 1.1rem;
-        font-weight: 600;
-        color: #fff;
-    }
-    
-    .tag-container {
-        margin-top: 20px;
-        display: flex;
-        flex-wrap: wrap;
-        gap: 8px;
-    }
-    
-    .small-tag {
-        font-size: 0.75rem;
-        padding: 4px 10px;
-        background: #1e1e1e;
-        border-radius: 6px;
-        color: #aaa;
-        border: 1px solid #333;
-    }
-    
-    /* -----------------------
-       PROMPT & TIPS
-       ----------------------- */
-    .prompt-container {
-        font-family: 'JetBrains Mono', monospace;
-        background: #050505;
-        border: 1px solid #333;
-        color: #22d3ee;
-        padding: 20px;
-        border-radius: 12px;
-        font-size: 0.9rem;
-        line-height: 1.6;
-    }
-    
-    .tip-item {
-        display: flex;
-        gap: 15px;
-        margin-bottom: 15px;
-        align-items: flex-start;
-    }
-    .tip-num {
-        background: #222;
-        color: #fff;
-        width: 24px;
-        height: 24px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        border-radius: 50%;
-        font-size: 0.7rem;
-        flex-shrink: 0;
-    }
-    .tip-text {
-        color: #a1a1aa;
-        font-size: 0.9rem;
-        line-height: 1.4;
-    }
-    
-    /* -----------------------
-       UPLOAD ZONE
-       ----------------------- */
-    .upload-area {
-        border: 2px dashed #333;
-        border-radius: 20px;
-        padding: 60px;
-        text-align: center;
-        background: rgba(255,255,255,0.01);
-        transition: all 0.3s ease;
-    }
-    .upload-area:hover {
-        border-color: #555;
-        background: rgba(255,255,255,0.02);
-    }
+    /* LYRIC STUDIO */
+    .lyric-area textarea { background: #080808 !important; color: #ccc !important; border: 1px solid #333 !important; font-family: 'Inter', sans-serif; }
+    .lyric-output { background: #080808; border: 1px solid #333; padding: 20px; border-radius: 12px; font-family: 'JetBrains Mono', monospace; white-space: pre-wrap; color: #a78bfa; height: 300px; overflow-y: auto; }
+
+    /* UPLOAD */
+    .upload-area { border: 2px dashed #333; border-radius: 20px; padding: 60px; text-align: center; }
     </style>
 """, unsafe_allow_html=True)
 
@@ -302,7 +146,6 @@ async def identify_song(file_path):
 
 def analyze_gemini_json(song_data):
     if not api_key: return None
-    
     try:
         model = genai.GenerativeModel('gemini-2.5-flash')
     except:
@@ -317,9 +160,9 @@ def analyze_gemini_json(song_data):
         "tempo": "e.g. 128 BPM",
         "instruments": ["Synth", "Bass", "Drums"],
         "vocal_type": "Male / Female / Choir",
-        "vocal_style": "Short description (e.g. Reverb-heavy)",
-        "suno_prompt": "Genre, Tempo, Instruments, Vocal Style (One line for AI generation)",
-        "tips": ["Production tip 1", "Production tip 2", "Production tip 3"]
+        "vocal_style": "Short description",
+        "suno_prompt": "Genre, Tempo, Instruments, Vocal Style",
+        "tips": ["Tip 1", "Tip 2", "Tip 3"]
     }}
     """
     try:
@@ -329,11 +172,48 @@ def analyze_gemini_json(song_data):
     except:
         return None
 
+def format_lyrics_with_tags(raw_lyrics, song_analysis):
+    if not api_key: return "Please set API Key"
+    try:
+        model = genai.GenerativeModel('gemini-2.5-flash')
+    except:
+        model = genai.GenerativeModel('gemini-1.5-flash')
+        
+    prompt = f"""
+    Act as a Suno.ai Meta-Tagging Expert.
+    
+    CONTEXT:
+    The user wants to create a song in the style of:
+    Genre: {song_analysis.get('genre', 'Pop')}
+    Mood: {song_analysis.get('mood', 'General')}
+    Instruments: {song_analysis.get('instruments', [])}
+    
+    TASK:
+    Take the user's raw lyrics below and insert appropriate Suno Meta Tags to structure the song exactly like the genre above.
+    Examples of tags: [Verse 1], [Chorus], [Build], [Drop], [Bridge], [Outro], [Instrumental Break].
+    
+    If it's EDM, use [Build] and [Drop].
+    If it's Hip Hop, use [Verse] and [Hook].
+    
+    USER LYRICS:
+    "{raw_lyrics}"
+    
+    OUTPUT:
+    Return ONLY the lyrics with the tags inserted. Do not rewrite the words unless necessary for structure.
+    """
+    try:
+        response = model.generate_content(prompt)
+        return response.text
+    except Exception as e:
+        return f"Error: {e}"
+
 # --- 4. MAIN APPLICATION ---
 def main():
     if 'song_data' not in st.session_state:
         st.session_state.song_data = None
         st.session_state.analysis = None
+    if 'formatted_lyrics' not in st.session_state:
+        st.session_state.formatted_lyrics = ""
 
     # HEADER LOGO
     st.markdown("<h1 style='text-align:center; letter-spacing:-2px; margin-bottom:0;'>SUNOSONIC</h1>", unsafe_allow_html=True)
@@ -368,7 +248,7 @@ def main():
         data = st.session_state.song_data
         ai = st.session_state.analysis or {}
 
-        # 1. HERO BANNER
+        # HERO BANNER
         st.markdown(f"""
             <div class="hero-wrapper">
                 <img src="{data['artist_bg']}" class="hero-bg">
@@ -388,98 +268,80 @@ def main():
         st.audio(data.get('album_art') or "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3", format='audio/mp3')
         st.markdown("<br>", unsafe_allow_html=True)
 
-        # 2. ANALYSIS GRID
+        # ANALYSIS GRID
         col1, col2 = st.columns(2)
-        
-        # LEFT: SONIC PROFILE
         with col1:
             st.markdown(f"""
                 <div class="glass-panel glow-cyan">
                     <div class="panel-header"><span style="color:#38bdf8">⚡</span> SONIC PROFILE</div>
                     <div class="stat-grid">
-                        <div class="stat-box">
-                            <div class="stat-label">MOOD</div>
-                            <div class="stat-value">{ai.get('mood', '-')}</div>
-                        </div>
-                         <div class="stat-box">
-                            <div class="stat-label">GENRE</div>
-                            <div class="stat-value">{data['genre']}</div>
-                        </div>
+                        <div class="stat-box"><div class="stat-label">MOOD</div><div class="stat-value">{ai.get('mood', '-')}</div></div>
+                         <div class="stat-box"><div class="stat-label">GENRE</div><div class="stat-value">{data['genre']}</div></div>
                     </div>
-                    <div class="tag-container">
-                        {''.join([f'<span class="small-tag">{inst}</span>' for inst in ai.get('instruments', [])])}
-                    </div>
+                    <div style="margin-top:15px">{''.join([f'<span class="small-tag">{inst}</span>' for inst in ai.get('instruments', [])])}</div>
                 </div>
             """, unsafe_allow_html=True)
 
-        # RIGHT: VOCAL ARCHITECTURE
         with col2:
             st.markdown(f"""
                 <div class="glass-panel glow-pink">
                     <div class="panel-header"><span style="color:#ec4899">🎙</span> VOCAL ARCHITECTURE</div>
                     <div class="stat-grid">
-                        <div class="stat-box">
-                            <div class="stat-label">TYPE</div>
-                            <div class="stat-value">{ai.get('vocal_type', '-')}</div>
-                        </div>
-                         <div class="stat-box">
-                            <div class="stat-label">PROCESSING</div>
-                            <div class="stat-value">Modern</div>
-                        </div>
+                        <div class="stat-box"><div class="stat-label">TYPE</div><div class="stat-value">{ai.get('vocal_type', '-')}</div></div>
+                         <div class="stat-box"><div class="stat-label">STYLE</div><div class="stat-value">Modern</div></div>
                     </div>
-                    <div style="margin-top:20px; font-size:0.9rem; color:#ccc; font-style:italic;">
-                        "{ai.get('vocal_style', 'Analysis pending...')}"
-                    </div>
+                    <div style="margin-top:15px; font-size:0.9rem; color:#ccc; font-style:italic;">"{ai.get('vocal_style', '-')}"</div>
                 </div>
             """, unsafe_allow_html=True)
         
+        # VISUALIZER
         st.markdown("<br>", unsafe_allow_html=True)
-
-        # 3. STRUCTURAL DYNAMICS & RMS (THE VISUALIZER)
-        st.markdown(f"""
-            <div class="glass-panel" style="border-top: 1px solid rgba(255,255,255,0.1);">
-                <div class="panel-header">🎼 STRUCTURAL DYNAMICS & RMS</div>
-            </div>
-        """, unsafe_allow_html=True)
-        
-        # Generate fake waveform data for aesthetics
-        chart_data = pd.DataFrame(
-            np.random.randn(80, 3),
-            columns=['L', 'R', 'RMS']
-        )
+        st.markdown(f'<div class="glass-panel" style="border-top: 1px solid rgba(255,255,255,0.1);"><div class="panel-header">🎼 STRUCTURAL DYNAMICS & RMS</div></div>', unsafe_allow_html=True)
+        chart_data = pd.DataFrame(np.random.randn(80, 3), columns=['L', 'R', 'RMS'])
         st.area_chart(chart_data, height=120, color=["#38bdf8", "#ec4899", "#8b5cf6"])
         
         st.markdown("<br>", unsafe_allow_html=True)
 
-        # 4. PROMPT & TIPS
+        # PROMPT & TIPS
         p_col, t_col = st.columns([1.5, 1])
-        
         with p_col:
-            st.markdown(f"""
-                <div class="glass-panel glow-purple">
-                    <div class="panel-header"><span style="color:#a855f7">🎹</span> SUNO AI STYLE PROMPT</div>
-                    <div class="prompt-container">{ai.get('suno_prompt', 'Generating...')}</div>
-                    <div style="margin-top:10px; font-size:0.75rem; color:#666;">COPY THIS PROMPT DIRECTLY INTO SUNO V3</div>
-                </div>
-            """, unsafe_allow_html=True)
+            st.markdown(f'<div class="glass-panel glow-purple"><div class="panel-header"><span style="color:#a855f7">🎹</span> SUNO AI STYLE PROMPT</div><div class="prompt-container">{ai.get("suno_prompt", "Generating...")}</div></div>', unsafe_allow_html=True)
 
         with t_col:
-            tips_html = ""
-            for i, tip in enumerate(ai.get('tips', [])):
-                tips_html += f'<div class="tip-item"><div class="tip-num">{i+1}</div><div class="tip-text">{tip}</div></div>'
-            
-            st.markdown(f"""
-                <div class="glass-panel">
-                    <div class="panel-header">💡 PRO TIPS</div>
-                    {tips_html}
-                </div>
-            """, unsafe_allow_html=True)
+            tips_html = "".join([f'<div class="tip-item"><div class="tip-num">{i+1}</div><div>{tip}</div></div>' for i, tip in enumerate(ai.get('tips', []))])
+            st.markdown(f'<div class="glass-panel"><div class="panel-header">💡 PRO TIPS</div>{tips_html}</div>', unsafe_allow_html=True)
 
-        # 5. RESET
+        # --- LYRIC STUDIO ---
+        st.markdown("<br>", unsafe_allow_html=True)
+        st.markdown('<div class="glass-panel glow-purple" style="border: 1px solid #4c1d95;">', unsafe_allow_html=True)
+        st.markdown('<div class="panel-header">📝 LYRIC STUDIO <span class="small-tag" style="margin-left:10px; color:#a78bfa; border-color:#a78bfa;">AUTO-TAGGER</span></div>', unsafe_allow_html=True)
+        
+        l_col1, l_col2 = st.columns(2)
+        
+        with l_col1:
+            st.caption("PASTE RAW LYRICS HERE")
+            raw_input = st.text_area("raw", height=300, placeholder="I walked down the street\nThe lights were low...", label_visibility="collapsed", key="raw_lyrics_input")
+            
+            if st.button("✨ APPLY SUNO META TAGS", use_container_width=True):
+                if raw_input:
+                    with st.spinner("AI is structuring your lyrics based on the song style..."):
+                        st.session_state.formatted_lyrics = format_lyrics_with_tags(raw_input, ai)
+        
+        with l_col2:
+            st.caption("FORMATTED OUTPUT (READY FOR SUNO)")
+            if st.session_state.formatted_lyrics:
+                st.code(st.session_state.formatted_lyrics, language="markdown", line_numbers=False)
+            else:
+                st.markdown('<div class="lyric-output" style="color:#555; display:flex; align-items:center; justify-content:center;">Result will appear here...</div>', unsafe_allow_html=True)
+
+        st.markdown('</div>', unsafe_allow_html=True)
+
+        # RESET
         st.markdown("<br>", unsafe_allow_html=True)
         if st.button("⬅ ANALYZE NEW TRACK", use_container_width=True):
             st.session_state.song_data = None
             st.session_state.analysis = None
+            st.session_state.formatted_lyrics = ""
             st.rerun()
 
 if __name__ == "__main__":
