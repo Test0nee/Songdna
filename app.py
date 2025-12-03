@@ -11,102 +11,124 @@ st.set_page_config(
     page_title="SunoSonic",
     page_icon="🎹",
     layout="wide",
-    initial_sidebar_state="expanded"
+    initial_sidebar_state="collapsed" # Force sidebar to hide
 )
 
-# --- 2. NVGT KINETIC UI (CSS) ---
+# --- 2. SUPERIOR UI (CSS) ---
 st.markdown("""
     <style>
-    /* RESET & DARK THEME */
+    /* 1. FORCE DARK THEME & RESET */
     .stApp {
         background-color: #000000;
+        color: #FFFFFF;
     }
     
-    /* NUCLEAR PADDING REMOVAL */
+    /* 2. CENTER CONTENT CORRECTLY */
     .block-container {
-        padding-top: 0rem !important;
-        padding-bottom: 0rem !important;
-        padding-left: 0rem !important;
-        padding-right: 0rem !important;
-        max-width: 100% !important;
+        padding-top: 5vh !important;
+        padding-bottom: 5vh !important;
+        max-width: 900px !important; /* Tighter focus like Google Studio */
     }
     
-    /* HIDE HEADER/FOOTER */
+    /* 3. HIDE JUNK */
     header[data-testid="stHeader"] {display: none;}
     footer {display: none;}
+    #MainMenu {visibility: hidden;}
+    [data-testid="stSidebar"] {display: none;} /* Nuke the sidebar completely */
 
-    /* KINETIC BACKGROUND */
+    /* 4. KINETIC BACKGROUND */
     .kinetic-wrapper {
         position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
         z-index: 0; overflow: hidden;
-        display: flex; flex-direction: column; justify-content: center; gap: 15px;
-        opacity: 0.5; filter: grayscale(100%) contrast(1.2); pointer-events: none;
+        display: flex; flex-direction: column; justify-content: center; gap: 20px;
+        opacity: 0.4; filter: grayscale(100%) contrast(1.1); pointer-events: none;
     }
-    .marquee-row { display: flex; gap: 15px; width: 200vw; }
+    .marquee-row { display: flex; gap: 20px; width: 200vw; }
     .marquee-item {
-        width: 250px; height: 150px; background-color: #111;
-        border-radius: 8px; background-size: cover; background-position: center;
-        flex-shrink: 0; border: 1px solid rgba(255,255,255,0.1);
-        opacity: 0.8;
+        width: 300px; height: 180px; background-color: #222;
+        border-radius: 12px; background-size: cover; background-position: center;
+        flex-shrink: 0; border: 1px solid rgba(255,255,255,0.05);
+        opacity: 0.7; box-shadow: 0 4px 30px rgba(0,0,0,0.5);
     }
     
     /* ANIMATIONS */
     @keyframes scrollLeft { from {transform: translateX(0);} to {transform: translateX(-50%);} }
     @keyframes scrollRight { from {transform: translateX(-50%);} to {transform: translateX(0);} }
-    .scroll-left { animation: scrollLeft 60s linear infinite; }
-    .scroll-right { animation: scrollRight 60s linear infinite; }
+    .scroll-left { animation: scrollLeft 50s linear infinite; }
+    .scroll-right { animation: scrollRight 50s linear infinite; }
 
-    /* GLASS FOREGROUND */
+    /* 5. GLASS PANEL (The Hero) */
     .glass-panel {
         position: relative; z-index: 10;
-        background: rgba(10, 10, 10, 0.75);
-        backdrop-filter: blur(25px); -webkit-backdrop-filter: blur(25px);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        border-radius: 24px; padding: 50px;
-        max-width: 900px; margin: 80px auto;
-        box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5);
+        background: rgba(18, 18, 18, 0.85);
+        backdrop-filter: blur(40px); -webkit-backdrop-filter: blur(40px);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 24px; padding: 60px;
+        box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+        text-align: center;
+        transition: all 0.5s ease;
     }
 
-    /* TYPOGRAPHY */
+    /* 6. TYPOGRAPHY & ELEMENTS */
     h1 {
-        font-family: sans-serif; font-weight: 900; letter-spacing: -3px;
-        font-size: 4rem !important; text-align: center; color: white; margin: 0;
+        font-family: 'Helvetica Neue', sans-serif; font-weight: 800; letter-spacing: -2px;
+        font-size: 3.5rem !important; color: white; margin-bottom: 10px;
     }
     .subtitle {
-        text-align: center; color: #888; font-family: monospace; letter-spacing: 4px; margin-bottom: 40px; text-transform: uppercase;
+        color: #888; font-family: monospace; letter-spacing: 4px; 
+        margin-bottom: 50px; text-transform: uppercase; font-size: 0.8rem;
     }
     
-    /* BUTTONS & UPLOAD */
-    .stFileUploader { padding: 20px; border: 1px dashed rgba(255,255,255,0.2); border-radius: 12px; }
-    div.stButton > button { width: 100%; border-radius: 8px; font-weight: bold; text-transform: uppercase; background: white; color: black; border: none; padding: 12px; }
-    div.stButton > button:hover { transform: scale(1.02); background: #eee; }
+    /* Uploader Styling */
+    .stFileUploader { 
+        padding: 30px; 
+        border: 2px dashed rgba(255,255,255,0.1); 
+        border-radius: 16px; 
+        background: rgba(255,255,255,0.02);
+        transition: border 0.3s ease;
+    }
+    .stFileUploader:hover { border-color: rgba(255,255,255,0.4); }
+    
+    /* Buttons */
+    div.stButton > button { 
+        width: 100%; border-radius: 12px; font-weight: bold; 
+        text-transform: uppercase; letter-spacing: 2px;
+        background: #ffffff; color: black; border: none; padding: 18px; 
+        transition: all 0.3s ease;
+        margin-top: 20px;
+    }
+    div.stButton > button:hover { 
+        transform: translateY(-2px); 
+        box-shadow: 0 10px 30px rgba(255,255,255,0.15);
+        background: #f0f0f0;
+    }
+    
+    /* Images */
+    img { border-radius: 12px; box-shadow: 0 10px 40px rgba(0,0,0,0.5); }
+    
+    /* Info Box */
+    .stAlert { background-color: rgba(255,255,255,0.05); border: none; color: #ccc; }
     </style>
     
     <div class="kinetic-wrapper">
         <div class="marquee-row scroll-left">
-            <div class="marquee-item" style="background-image: url('https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=400')"></div>
-            <div class="marquee-item" style="background-image: url('https://images.unsplash.com/photo-1493225255756-d9584f8606e9?w=400')"></div>
-            <div class="marquee-item" style="background-image: url('https://images.unsplash.com/photo-1514525253440-b393452e8d26?w=400')"></div>
-            <div class="marquee-item" style="background-image: url('https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=400')"></div>
-            <div class="marquee-item" style="background-image: url('https://images.unsplash.com/photo-1511379938547-c1f69419868d?w=400')"></div>
-            <div class="marquee-item" style="background-image: url('https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=400')"></div>
-            <div class="marquee-item" style="background-image: url('https://images.unsplash.com/photo-1493225255756-d9584f8606e9?w=400')"></div>
+            <div class="marquee-item" style="background-image: url('https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=500')"></div>
+            <div class="marquee-item" style="background-image: url('https://images.unsplash.com/photo-1493225255756-d9584f8606e9?w=500')"></div>
+            <div class="marquee-item" style="background-image: url('https://images.unsplash.com/photo-1514525253440-b393452e8d26?w=500')"></div>
+            <div class="marquee-item" style="background-image: url('https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=500')"></div>
+            <div class="marquee-item" style="background-image: url('https://images.unsplash.com/photo-1511379938547-c1f69419868d?w=500')"></div>
         </div>
         <div class="marquee-row scroll-right">
-            <div class="marquee-item" style="background-image: url('https://images.unsplash.com/photo-1501612780327-45045538702b?w=400')"></div>
-            <div class="marquee-item" style="background-image: url('https://images.unsplash.com/photo-1459749411177-0473ef71607b?w=400')"></div>
-            <div class="marquee-item" style="background-image: url('https://images.unsplash.com/photo-1498038432885-c6f3f1b912ee?w=400')"></div>
-            <div class="marquee-item" style="background-image: url('https://images.unsplash.com/photo-1520523839897-bd0b52f945a0?w=400')"></div>
-            <div class="marquee-item" style="background-image: url('https://images.unsplash.com/photo-1501612780327-45045538702b?w=400')"></div>
-            <div class="marquee-item" style="background-image: url('https://images.unsplash.com/photo-1459749411177-0473ef71607b?w=400')"></div>
+            <div class="marquee-item" style="background-image: url('https://images.unsplash.com/photo-1501612780327-45045538702b?w=500')"></div>
+            <div class="marquee-item" style="background-image: url('https://images.unsplash.com/photo-1459749411177-0473ef71607b?w=500')"></div>
+            <div class="marquee-item" style="background-image: url('https://images.unsplash.com/photo-1498038432885-c6f3f1b912ee?w=500')"></div>
+            <div class="marquee-item" style="background-image: url('https://images.unsplash.com/photo-1520523839897-bd0b52f945a0?w=500')"></div>
         </div>
          <div class="marquee-row scroll-left">
-            <div class="marquee-item" style="background-image: url('https://images.unsplash.com/photo-1511735111813-97415a4ed839?w=400')"></div>
-            <div class="marquee-item" style="background-image: url('https://images.unsplash.com/photo-1506157786151-b8491531f525?w=400')"></div>
-            <div class="marquee-item" style="background-image: url('https://images.unsplash.com/photo-1508700115892-45ecd05ae2ad?w=400')"></div>
-            <div class="marquee-item" style="background-image: url('https://images.unsplash.com/photo-1485579149621-3123dd979885?w=400')"></div>
-            <div class="marquee-item" style="background-image: url('https://images.unsplash.com/photo-1511735111813-97415a4ed839?w=400')"></div>
-            <div class="marquee-item" style="background-image: url('https://images.unsplash.com/photo-1506157786151-b8491531f525?w=400')"></div>
+            <div class="marquee-item" style="background-image: url('https://images.unsplash.com/photo-1511735111813-97415a4ed839?w=500')"></div>
+            <div class="marquee-item" style="background-image: url('https://images.unsplash.com/photo-1506157786151-b8491531f525?w=500')"></div>
+            <div class="marquee-item" style="background-image: url('https://images.unsplash.com/photo-1508700115892-45ecd05ae2ad?w=500')"></div>
+            <div class="marquee-item" style="background-image: url('https://images.unsplash.com/photo-1485579149621-3123dd979885?w=500')"></div>
         </div>
     </div>
 """, unsafe_allow_html=True)
@@ -127,15 +149,13 @@ def run_async(coroutine):
         asyncio.set_event_loop(loop)
     return loop.run_until_complete(coroutine)
 
-# 3. DEEZER FETCH (THE "EYE")
+# 3. DEEZER FETCH
 async def fetch_artist_image(artist):
     if not artist: return None
-    # Clean the name (Tiësto & Karol G -> Tiësto)
     clean_artist = artist.split(',')[0].split('&')[0].split('feat')[0].strip()
     try:
-        # Use CORS Proxy for safety (even though Python handles CORS better)
         url = f"https://api.deezer.com/search/artist?q={clean_artist}"
-        r = requests.get(url, timeout=5) # Direct request works in Python!
+        r = requests.get(url, timeout=5)
         data = r.json()
         if 'data' in data and data['data']:
             return data['data'][0]['picture_xl']
@@ -143,7 +163,7 @@ async def fetch_artist_image(artist):
         return None
     return None
 
-# 4. SHAZAM IDENTIFY (THE "EAR")
+# 4. SHAZAM IDENTIFY
 async def identify_song(file_path):
     shazam = Shazam()
     try:
@@ -162,7 +182,7 @@ async def identify_song(file_path):
     except Exception as e:
         return {"found": False, "error": str(e)}
 
-# 5. GEMINI ANALYZE (THE "BRAIN")
+# 5. GEMINI ANALYZE
 def analyze_gemini(song_data):
     if not api_key: return "⚠️ Please add GEMINI_API_KEY to Streamlit Secrets."
     model = genai.GenerativeModel('gemini-1.5-flash')
@@ -185,55 +205,27 @@ def main():
     if 'song_data' not in st.session_state:
         st.session_state.song_data = None
 
-    # --- SIDEBAR INPUT ---
-    st.sidebar.title("🎧 Input Audio")
-    # We use a unique key here to avoid conflict with the center uploader
-    sidebar_file = st.sidebar.file_uploader("Upload a song snippet", type=["mp3", "wav"], key="sidebar_uploader")
-
-    if sidebar_file:
-        st.sidebar.audio(sidebar_file)
-        
-        # Trigger processing ONLY if we haven't already loaded this data to avoid infinite reruns
-        # or if the user wants to override the current song
-        if st.button("Analyze Sidebar Audio", key="sidebar_btn"):
-             with st.spinner("🎧 SIDEBAR UPLOAD DETECTED... PROCESSING..."):
-                with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as tmp:
-                    tmp.write(sidebar_file.getvalue())
-                    tmp_path = tmp.name
-                
-                result = run_async(identify_song(tmp_path))
-                os.remove(tmp_path)
-                
-                if result['found']:
-                    img = run_async(fetch_artist_image(result['artist']))
-                    result['artist_bg'] = img
-                    st.session_state.song_data = result
-                    st.rerun()
-                else:
-                    st.sidebar.error("No match found.")
-
-    # --- CENTER UI ---
+    # Start Glass Panel
     st.markdown('<div class="glass-panel">', unsafe_allow_html=True)
     st.markdown('<h1>SUNOSONIC</h1>', unsafe_allow_html=True)
     st.markdown('<div class="subtitle">AI AUDIO INTELLIGENCE</div>', unsafe_allow_html=True)
 
-    # STATE 1: UPLOAD (Center)
+    # STATE 1: UPLOAD
     if not st.session_state.song_data:
-        uploaded_file = st.file_uploader("DROP AUDIO FILE", type=['mp3', 'wav', 'ogg'], key="center_uploader")
+        uploaded_file = st.file_uploader("DROP AUDIO FILE HERE", type=['mp3', 'wav', 'ogg'])
         
         if uploaded_file:
-            with st.spinner("🎧 LISTENING & DECODING..."):
-                # Save temp file for Shazam
+            with st.spinner("🎧 ANALYZING AUDIO SPECTYROGRAM..."):
+                # Save temp file
                 with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as tmp:
                     tmp.write(uploaded_file.getvalue())
                     tmp_path = tmp.name
                 
-                # Run the "Ear"
+                # Run Logic
                 result = run_async(identify_song(tmp_path))
                 os.remove(tmp_path)
                 
                 if result['found']:
-                    # Fetch Artist Image
                     img = run_async(fetch_artist_image(result['artist']))
                     result['artist_bg'] = img
                     st.session_state.song_data = result
@@ -248,25 +240,24 @@ def main():
         # Images
         bg_img = data.get('artist_bg') or data.get('album_art')
         
-        # Hero Banner
+        # Hero Image
         if bg_img:
             st.image(bg_img, use_container_width=True)
             
-        st.markdown(f"<h2 style='text-align:center;'>{data['artist']}</h2>", unsafe_allow_html=True)
-        st.markdown(f"<h3 style='text-align:center; color:#ccc;'>{data['title']}</h3>", unsafe_allow_html=True)
-        
-        # Reset Button
-        if st.button("⬅ SCAN NEW TRACK"):
-            st.session_state.song_data = None
-            st.rerun()
-            
-        st.markdown("---")
+        st.markdown(f"<h2 style='text-align:center; font-size: 2.5rem; margin-top:30px;'>{data['artist']}</h2>", unsafe_allow_html=True)
+        st.markdown(f"<h3 style='text-align:center; color:#ccc; font-weight:lighter; margin-bottom:30px;'>{data['title']}</h3>", unsafe_allow_html=True)
         
         # AI Analysis
         with st.spinner("GENERATING PROMPT..."):
             analysis = analyze_gemini(data)
             st.info(analysis)
 
+        # Reset
+        if st.button("⬅ SCAN NEW TRACK"):
+            st.session_state.song_data = None
+            st.rerun()
+
+    # End Glass Panel
     st.markdown('</div>', unsafe_allow_html=True)
 
 if __name__ == "__main__":
