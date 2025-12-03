@@ -18,152 +18,246 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# --- 2. MODERN UI (CSS) ---
+# --- 2. ULTRA-MODERN UI (CSS) ---
 st.markdown("""
     <style>
-    /* RESET & FONTS */
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap');
+    /* IMPORT FONTS */
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&family=JetBrains+Mono:wght@400;700&display=swap');
     
+    /* GLOBAL THEME */
     .stApp {
         background-color: #050505;
-        background-image: radial-gradient(circle at 50% 0%, #1a1a2e 0%, #000000 70%);
+        background-image: 
+            radial-gradient(at 0% 0%, rgba(56, 189, 248, 0.08) 0px, transparent 50%),
+            radial-gradient(at 100% 0%, rgba(236, 72, 153, 0.08) 0px, transparent 50%);
         font-family: 'Inter', sans-serif;
+        color: #ffffff;
     }
     
-    /* REMOVE DEFAULT PADDING */
+    /* RESET STREAMLIT PADDING */
     .block-container {
-        padding-top: 2rem !important;
+        padding-top: 1rem !important;
         padding-bottom: 5rem !important;
-        max-width: 1200px !important;
+        max-width: 1100px !important;
     }
     
-    /* HIDE ELEMENTS */
+    /* HIDE STREAMLIT ELEMENTS */
     header[data-testid="stHeader"] {display: none;}
     footer {display: none;}
     [data-testid="stSidebar"] {display: none;}
     
-    /* GLASS CARDS */
-    .glass-card {
-        background: rgba(255, 255, 255, 0.03);
-        backdrop-filter: blur(20px);
-        -webkit-backdrop-filter: blur(20px);
-        border: 1px solid rgba(255, 255, 255, 0.08);
-        border-radius: 20px;
-        padding: 24px;
-        margin-bottom: 20px;
-        box-shadow: 0 4px 24px -1px rgba(0, 0, 0, 0.2);
-    }
-    
-    /* HERO SECTION */
-    .hero-container {
+    /* -----------------------
+       HERO SECTION 
+       ----------------------- */
+    .hero-wrapper {
         position: relative;
-        width: 100%;
-        height: 300px;
         border-radius: 24px;
         overflow: hidden;
-        margin-bottom: 30px;
-        border: 1px solid rgba(255, 255, 255, 0.1);
+        margin-bottom: 25px;
+        box-shadow: 0 20px 50px -20px rgba(0,0,0,0.7);
+        border: 1px solid rgba(255,255,255,0.05);
+        height: 380px;
     }
+    
     .hero-bg {
         width: 100%;
         height: 100%;
         object-fit: cover;
-        opacity: 0.6;
-        filter: blur(0px) brightness(0.7);
+        transition: transform 0.5s ease;
     }
+    
     .hero-overlay {
         position: absolute;
-        bottom: 0;
-        left: 0;
-        width: 100%;
-        padding: 40px;
-        background: linear-gradient(to top, rgba(0,0,0,0.9), transparent);
+        inset: 0;
+        background: linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.6) 50%, #050505 100%);
         display: flex;
         flex-direction: column;
         justify-content: flex-end;
+        padding: 40px;
     }
     
-    /* TYPOGRAPHY */
-    .artist-name {
-        font-size: 3.5rem;
-        font-weight: 800;
-        color: white;
-        margin: 0;
-        letter-spacing: -2px;
-        line-height: 1;
-        text-shadow: 0 4px 12px rgba(0,0,0,0.5);
-    }
-    .song-title {
-        font-size: 1.5rem;
-        color: #cccccc;
-        font-weight: 400;
-        margin-top: 5px;
-        margin-bottom: 20px;
-    }
-    
-    /* BADGES */
-    .badge {
-        display: inline-block;
+    .verified-badge {
+        background: rgba(56, 189, 248, 0.2);
+        color: #38bdf8;
+        border: 1px solid rgba(56, 189, 248, 0.4);
         padding: 6px 12px;
-        border-radius: 50px;
+        border-radius: 100px;
         font-size: 0.75rem;
-        font-weight: 600;
-        text-transform: uppercase;
-        margin-right: 8px;
-        letter-spacing: 1px;
-    }
-    .badge-blue { background: rgba(59, 130, 246, 0.2); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.3); }
-    .badge-purple { background: rgba(139, 92, 246, 0.2); color: #a78bfa; border: 1px solid rgba(139, 92, 246, 0.3); }
-    .badge-pink { background: rgba(236, 72, 153, 0.2); color: #f472b6; border: 1px solid rgba(236, 72, 153, 0.3); }
-    
-    /* SECTIONS HEADERS */
-    .section-header {
-        font-size: 0.8rem;
-        color: #64748b;
-        text-transform: uppercase;
-        letter-spacing: 2px;
         font-weight: 700;
+        letter-spacing: 1px;
+        text-transform: uppercase;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
         margin-bottom: 15px;
+        backdrop-filter: blur(10px);
+    }
+    
+    .artist-title {
+        font-size: 5rem;
+        font-weight: 900;
+        line-height: 0.9;
+        margin-bottom: 5px;
+        letter-spacing: -3px;
+        background: linear-gradient(to right, #fff, #aaa);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }
+    
+    .song-subtitle {
+        font-size: 2rem;
+        font-weight: 400;
+        color: #94a3b8;
+        margin-bottom: 25px;
+        letter-spacing: -1px;
+    }
+    
+    .meta-tags {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+    }
+    
+    .meta-pill {
+        background: rgba(255,255,255,0.08);
+        border: 1px solid rgba(255,255,255,0.1);
+        padding: 8px 16px;
+        border-radius: 50px;
+        font-size: 0.85rem;
+        color: #e2e8f0;
+        backdrop-filter: blur(5px);
+    }
+    
+    /* -----------------------
+       GLASS CARDS
+       ----------------------- */
+    .glass-panel {
+        background: #0a0a0a;
+        border: 1px solid #1f1f1f;
+        border-radius: 20px;
+        padding: 24px;
+        height: 100%;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .glow-cyan { box-shadow: 0 0 40px -10px rgba(56, 189, 248, 0.1); border-top: 1px solid rgba(56, 189, 248, 0.2); }
+    .glow-pink { box-shadow: 0 0 40px -10px rgba(236, 72, 153, 0.1); border-top: 1px solid rgba(236, 72, 153, 0.2); }
+    .glow-purple { box-shadow: 0 0 40px -10px rgba(168, 85, 247, 0.1); border-top: 1px solid rgba(168, 85, 247, 0.2); }
+    
+    .panel-header {
         display: flex;
         align-items: center;
+        gap: 10px;
+        margin-bottom: 20px;
+        font-size: 0.8rem;
+        font-weight: 700;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        color: #64748b;
+    }
+    
+    .stat-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 15px;
+    }
+    
+    .stat-box {
+        background: rgba(255,255,255,0.03);
+        padding: 15px;
+        border-radius: 12px;
+        border: 1px solid rgba(255,255,255,0.03);
+    }
+    
+    .stat-label {
+        font-size: 0.7rem;
+        text-transform: uppercase;
+        color: #64748b;
+        margin-bottom: 4px;
+        letter-spacing: 1px;
+    }
+    
+    .stat-value {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: #fff;
+    }
+    
+    .tag-container {
+        margin-top: 20px;
+        display: flex;
+        flex-wrap: wrap;
         gap: 8px;
     }
     
-    /* DATA BOXES */
-    .data-box {
-        background: rgba(0,0,0,0.3);
-        border: 1px solid rgba(255,255,255,0.05);
+    .small-tag {
+        font-size: 0.75rem;
+        padding: 4px 10px;
+        background: #1e1e1e;
+        border-radius: 6px;
+        color: #aaa;
+        border: 1px solid #333;
+    }
+    
+    /* -----------------------
+       PROMPT & TIPS
+       ----------------------- */
+    .prompt-container {
+        font-family: 'JetBrains Mono', monospace;
+        background: #050505;
+        border: 1px solid #333;
+        color: #22d3ee;
+        padding: 20px;
         border-radius: 12px;
-        padding: 16px;
-        height: 100%;
-    }
-    .data-label { font-size: 0.7rem; color: #888; text-transform: uppercase; margin-bottom: 5px; }
-    .data-value { font-size: 1.1rem; color: white; font-weight: 600; }
-    
-    /* CUSTOM UPLOAD */
-    .stFileUploader > div > div {
-        background-color: rgba(255,255,255,0.02);
-        border: 1px dashed rgba(255,255,255,0.1);
-        border-radius: 16px;
-    }
-    
-    /* SUNO PROMPT BOX */
-    .prompt-box {
-        font-family: 'Courier New', monospace;
-        background: #0a0a0a;
-        border-left: 3px solid #a855f7;
-        padding: 15px;
-        color: #e2e8f0;
         font-size: 0.9rem;
-        line-height: 1.5;
-        border-radius: 4px;
+        line-height: 1.6;
+    }
+    
+    .tip-item {
+        display: flex;
+        gap: 15px;
+        margin-bottom: 15px;
+        align-items: flex-start;
+    }
+    .tip-num {
+        background: #222;
+        color: #fff;
+        width: 24px;
+        height: 24px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        font-size: 0.7rem;
+        flex-shrink: 0;
+    }
+    .tip-text {
+        color: #a1a1aa;
+        font-size: 0.9rem;
+        line-height: 1.4;
+    }
+    
+    /* -----------------------
+       UPLOAD ZONE
+       ----------------------- */
+    .upload-area {
+        border: 2px dashed #333;
+        border-radius: 20px;
+        padding: 60px;
+        text-align: center;
+        background: rgba(255,255,255,0.01);
+        transition: all 0.3s ease;
+    }
+    .upload-area:hover {
+        border-color: #555;
+        background: rgba(255,255,255,0.02);
     }
     </style>
 """, unsafe_allow_html=True)
 
-# --- 3. HELPER LOGIC ---
+# --- 3. LOGIC & HELPERS ---
 
-# Setup Gemini
 api_key = st.secrets.get("GEMINI_API_KEY")
 if api_key:
     genai.configure(api_key=api_key)
@@ -177,17 +271,18 @@ def run_async(coroutine):
     return loop.run_until_complete(coroutine)
 
 async def fetch_artist_image(artist):
-    if not artist: return "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=800&q=80"
+    if not artist: return "https://images.unsplash.com/photo-1514525253440-b393452e8d26?w=1200"
     clean_artist = artist.split(',')[0].split('&')[0].split('feat')[0].strip()
     try:
+        # Use Deezer API to get artist picture
         url = f"https://api.deezer.com/search/artist?q={clean_artist}"
         r = requests.get(url, timeout=5)
         data = r.json()
         if 'data' in data and data['data']:
             return data['data'][0]['picture_xl']
     except:
-        return "https://images.unsplash.com/photo-1493225255756-d9584f8606e9?w=800"
-    return "https://images.unsplash.com/photo-1493225255756-d9584f8606e9?w=800"
+        return "https://images.unsplash.com/photo-1514525253440-b393452e8d26?w=1200"
+    return "https://images.unsplash.com/photo-1514525253440-b393452e8d26?w=1200"
 
 async def identify_song(file_path):
     shazam = Shazam()
@@ -200,7 +295,7 @@ async def identify_song(file_path):
                 "title": track.get('title'),
                 "artist": track.get('subtitle'),
                 "album_art": track.get('images', {}).get('coverart'),
-                "genre": track.get('genres', {}).get('primary', 'Pop')
+                "genre": track.get('genres', {}).get('primary', 'Electronic')
             }
         return {"found": False}
     except Exception as e:
@@ -209,200 +304,196 @@ async def identify_song(file_path):
 def analyze_gemini_json(song_data):
     if not api_key: return None
     
-    # Using 2.5 Flash for speed, fallback to 2.0 Flash Lite or Pro if needed
+    # Try 2.5, fallback to 1.5
     try:
         model = genai.GenerativeModel('gemini-2.5-flash')
     except:
         model = genai.GenerativeModel('gemini-1.5-flash')
 
-    # We ask for JSON specifically to populate our new UI cards
     prompt = f"""
     Analyze the song "{song_data['title']}" by "{song_data['artist']}".
-    Return valid JSON ONLY. No markdown formatting.
-    Structure:
+    Return pure JSON. No markdown.
     {{
-        "mood": "One or two words (e.g. Uplifting, Dark)",
-        "key_tempo": "e.g. C Minor, 128 BPM",
-        "instruments": ["Instrument 1", "Instrument 2", "Instrument 3"],
-        "vocal_count": "Solo / Duet",
-        "vocal_gender": "Male / Female / Mixed",
-        "vocal_texture": "One short sentence description.",
-        "suno_prompt": "Genre, Tempo, Key Instruments, Vocal Style (One specific line)",
-        "production_tips": ["Tip 1", "Tip 2", "Tip 3"]
+        "mood": "Single Word (e.g. Euphoric)",
+        "key": "e.g. C# Minor",
+        "tempo": "e.g. 128 BPM",
+        "instruments": ["Synth", "Bass", "Drums"],
+        "vocal_type": "Male / Female / Choir",
+        "vocal_style": "Short description (e.g. Reverb-heavy)",
+        "suno_prompt": "Genre, Tempo, Instruments, Vocal Style (One line for AI generation)",
+        "tips": ["Production tip 1", "Production tip 2", "Production tip 3"]
     }}
     """
     try:
         response = model.generate_content(prompt)
-        # Clean response to ensure it's pure JSON
         clean_text = response.text.replace('```json', '').replace('```', '').strip()
         return json.loads(clean_text)
-    except Exception as e:
-        st.error(f"AI Brain Error: {e}")
+    except:
         return None
 
-# --- 4. MAIN APP ---
+# --- 4. MAIN APPLICATION ---
 def main():
-    # Header
-    st.markdown("<h1 style='text-align: center; margin-bottom: 5px;'>SUNOSONIC</h1>", unsafe_allow_html=True)
-    st.markdown("<p style='text-align: center; color: #666; letter-spacing: 4px; font-size: 0.8rem; margin-bottom: 40px;'>AI AUDIO INTELLIGENCE STUDIO</p>", unsafe_allow_html=True)
-
     if 'song_data' not in st.session_state:
         st.session_state.song_data = None
-    if 'analysis' not in st.session_state:
         st.session_state.analysis = None
 
-    # --- INPUT STATE ---
+    # HEADER LOGO
+    st.markdown("<h1 style='text-align:center; letter-spacing:-2px; margin-bottom:0;'>SUNOSONIC</h1>", unsafe_allow_html=True)
+    st.markdown("<p style='text-align:center; color:#555; font-size:0.8rem; letter-spacing:4px; margin-bottom:40px;'>AI AUDIO INTELLIGENCE</p>", unsafe_allow_html=True)
+
+    # --- STATE 1: UPLOAD ---
     if not st.session_state.song_data:
         uploaded_file = st.file_uploader(" ", type=['mp3', 'wav', 'ogg'])
         
+        # Custom Placeholder Text using Markdown above the invisible uploader labels
+        if not uploaded_file:
+            st.info("👆 DROP AUDIO FILE ABOVE TO BEGIN")
+
         if uploaded_file:
-            with st.spinner("🎧 DECODING AUDIO DNA..."):
-                # 1. Save Temp
+            with st.spinner("🎧 ANALYZING AUDIO SPECTRUM..."):
                 with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as tmp:
                     tmp.write(uploaded_file.getvalue())
                     tmp_path = tmp.name
                 
-                # 2. Identify
                 result = run_async(identify_song(tmp_path))
                 os.remove(tmp_path)
                 
                 if result['found']:
-                    # 3. Get Hero Image
                     result['artist_bg'] = run_async(fetch_artist_image(result['artist']))
                     st.session_state.song_data = result
-                    
-                    # 4. Get AI Analysis (JSON)
                     st.session_state.analysis = analyze_gemini_json(result)
                     st.rerun()
                 else:
-                    st.error("Could not identify track. Try a longer clip.")
+                    st.error("Could not identify track. Please try a clearer snippet.")
 
-    # --- RESULT STATE ---
+    # --- STATE 2: DASHBOARD ---
     else:
         data = st.session_state.song_data
-        ai = st.session_state.analysis
-        
-        # 1. TOP HERO SECTION
+        ai = st.session_state.analysis or {}
+
+        # 1. HERO BANNER
         st.markdown(f"""
-            <div class="hero-container">
+            <div class="hero-wrapper">
                 <img src="{data['artist_bg']}" class="hero-bg">
                 <div class="hero-overlay">
-                    <div style="margin-bottom: 10px;">
-                        <span class="badge badge-blue">✓ VERIFIED ARTIST</span>
-                    </div>
-                    <h1 class="artist-name">{data['artist']}</h1>
-                    <h2 class="song-title">{data['title']}</h2>
-                    <div>
-                        <span class="badge badge-purple">{data['genre']}</span>
-                        <span class="badge badge-pink">{ai.get('key_tempo', 'Analyzing...') if ai else '...'}</span>
+                    <div><span class="verified-badge">✓ Verified Artist</span></div>
+                    <div class="artist-title">{data['artist']}</div>
+                    <div class="song-subtitle">{data['title']}</div>
+                    <div class="meta-tags">
+                        <span class="meta-pill">🎵 {data['genre']}</span>
+                        <span class="meta-pill">⏱ {ai.get('tempo', '-- BPM')}</span>
+                        <span class="meta-pill">🎹 {ai.get('key', '--')}</span>
                     </div>
                 </div>
             </div>
         """, unsafe_allow_html=True)
-
-        # Audio Player
-        st.audio(data.get('album_art') or "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3", format="audio/mp3") # Placeholder if no local file
-
-        if ai:
-            # 2. SONIC & VOCAL GRID
-            c1, c2 = st.columns(2)
-            
-            with c1:
-                st.markdown('<div class="glass-card">', unsafe_allow_html=True)
-                st.markdown('<div class="section-header">⚡ SONIC PROFILE</div>', unsafe_allow_html=True)
-                
-                sc1, sc2 = st.columns(2)
-                with sc1:
-                    st.markdown(f"""
-                        <div class="data-box">
-                            <div class="data-label">MOOD</div>
-                            <div class="data-value">{ai.get('mood', '-')}</div>
-                        </div>
-                    """, unsafe_allow_html=True)
-                with sc2:
-                    st.markdown(f"""
-                        <div class="data-box">
-                            <div class="data-label">KEY/TEMPO</div>
-                            <div class="data-value">{ai.get('key_tempo', '-')}</div>
-                        </div>
-                    """, unsafe_allow_html=True)
-                
-                st.markdown("<br>", unsafe_allow_html=True)
-                # Instruments Tags
-                inst_html = "".join([f'<span class="badge badge-blue" style="margin-bottom:5px;">{inst}</span>' for inst in ai.get('instruments', [])])
-                st.markdown(f"<div>{inst_html}</div>", unsafe_allow_html=True)
-                st.markdown('</div>', unsafe_allow_html=True)
-
-            with c2:
-                st.markdown('<div class="glass-card">', unsafe_allow_html=True)
-                st.markdown('<div class="section-header">🎙️ VOCAL ARCHITECTURE</div>', unsafe_allow_html=True)
-                
-                vc1, vc2 = st.columns(2)
-                with vc1:
-                     st.markdown(f"""
-                        <div class="data-box">
-                            <div class="data-label">COUNT</div>
-                            <div class="data-value">{ai.get('vocal_count', '-')}</div>
-                        </div>
-                    """, unsafe_allow_html=True)
-                with vc2:
-                     st.markdown(f"""
-                        <div class="data-box">
-                            <div class="data-label">GENDER</div>
-                            <div class="data-value">{ai.get('vocal_gender', '-')}</div>
-                        </div>
-                    """, unsafe_allow_html=True)
-                
-                st.markdown("<br>", unsafe_allow_html=True)
-                st.markdown(f"""
-                    <div class="data-box" style="border:none; background:rgba(255,255,255,0.03);">
-                        <div class="data-label">VOCAL TEXTURE ANALYSIS</div>
-                        <div style="font-style: italic; color: #ccc;">"{ai.get('vocal_texture', '-')}"</div>
-                    </div>
-                """, unsafe_allow_html=True)
-                st.markdown('</div>', unsafe_allow_html=True)
-
-            # 3. WAVEFORM VISUALIZER (Simulated for aesthetics)
-            st.markdown('<div class="glass-card">', unsafe_allow_html=True)
-            st.markdown('<div class="section-header">🎼 STRUCTURAL DYNAMICS & RMS</div>', unsafe_allow_html=True)
-            
-            chart_data = pd.DataFrame(
-                np.random.randn(50, 3),
-                columns=['a', 'b', 'c'])
-            # Create a cool neon area chart
-            st.area_chart(chart_data, height=120, color=["#3b82f6", "#8b5cf6", "#ec4899"])
-            st.markdown('</div>', unsafe_allow_html=True)
-
-            # 4. PROMPT & TIPS
-            c3, c4 = st.columns([1.5, 1])
-            
-            with c3:
-                st.markdown('<div class="glass-card" style="height: 100%;">', unsafe_allow_html=True)
-                st.markdown('<div class="section-header">🎹 SUNO AI STYLE PROMPT</div>', unsafe_allow_html=True)
-                st.markdown(f'<div class="prompt-box">{ai.get("suno_prompt", "Generating...")}</div>', unsafe_allow_html=True)
-                st.caption("Copy this directly into Suno v3 for best results.")
-                st.markdown('</div>', unsafe_allow_html=True)
-                
-            with c4:
-                st.markdown('<div class="glass-card" style="height: 100%;">', unsafe_allow_html=True)
-                st.markdown('<div class="section-header">💡 TIPS & TRICKS</div>', unsafe_allow_html=True)
-                tips_html = "".join([f'<li style="margin-bottom:8px; color:#ddd; font-size:0.9rem;">{tip}</li>' for tip in ai.get('production_tips', [])])
-                st.markdown(f'<ul style="padding-left: 20px;">{tips_html}</ul>', unsafe_allow_html=True)
-                st.markdown('</div>', unsafe_allow_html=True)
-
-        # 5. LYRIC STUDIO (Visual Only)
-        st.markdown('<div class="glass-card">', unsafe_allow_html=True)
-        st.markdown('<div class="section-header">📝 LYRIC STUDIO <span class="badge badge-purple" style="margin-left:10px; font-size:0.5rem">SUNO COMPATIBLE</span></div>', unsafe_allow_html=True)
-        lc1, lc2 = st.columns([3, 1])
-        with lc1:
-            st.text_input("Enter lyric theme", placeholder="Ex: A cyber-noir detective story set in Tokyo...")
-        with lc2:
-            st.markdown("<br>", unsafe_allow_html=True)
-            st.button("✨ GENERATE LYRICS", use_container_width=True)
-        st.markdown('</div>', unsafe_allow_html=True)
         
-        # Reset
-        if st.button("← ANALYZE NEW TRACK", type="secondary"):
+        # Audio Player (Standard Streamlit)
+        st.audio(data.get('album_art') or "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3", format='audio/mp3')
+
+        st.markdown("<br>", unsafe_allow_html=True)
+
+        # 2. ANALYSIS GRID
+        col1, col2 = st.columns(2)
+        
+        # LEFT: SONIC PROFILE (Cyan Theme)
+        with col1:
+            st.markdown(f"""
+                <div class="glass-panel glow-cyan">
+                    <div class="panel-header">
+                        <span style="color:#38bdf8">⚡</span> SONIC PROFILE
+                    </div>
+                    <div class="stat-grid">
+                        <div class="stat-box">
+                            <div class="stat-label">MOOD</div>
+                            <div class="stat-value">{ai.get('mood', '-')}</div>
+                        </div>
+                         <div class="stat-box">
+                            <div class="stat-label">GENRE</div>
+                            <div class="stat-value">{data['genre']}</div>
+                        </div>
+                    </div>
+                    <div class="tag-container">
+                        {''.join([f'<span class="small-tag">{inst}</span>' for inst in ai.get('instruments', [])])}
+                    </div>
+                </div>
+            """, unsafe_allow_html=True)
+
+        # RIGHT: VOCAL ARCHITECTURE (Pink Theme)
+        with col2:
+            st.markdown(f"""
+                <div class="glass-panel glow-pink">
+                    <div class="panel-header">
+                        <span style="color:#ec4899">🎙</span> VOCAL ARCHITECTURE
+                    </div>
+                    <div class="stat-grid">
+                        <div class="stat-box">
+                            <div class="stat-label">TYPE</div>
+                            <div class="stat-value">{ai.get('vocal_type', '-')}</div>
+                        </div>
+                         <div class="stat-box">
+                            <div class="stat-label">PROCESSING</div>
+                            <div class="stat-value">Modern</div>
+                        </div>
+                    </div>
+                    <div style="margin-top:20px; font-size:0.9rem; color:#ccc; font-style:italic;">
+                        "{ai.get('vocal_style', 'Analysis pending...')}"
+                    </div>
+                </div>
+            """, unsafe_allow_html=True)
+        
+        st.markdown("<br>", unsafe_allow_html=True)
+
+        # 3. PROMPT & TIPS ROW
+        p_col, t_col = st.columns([1.5, 1])
+        
+        with p_col:
+            st.markdown(f"""
+                <div class="glass-panel glow-purple">
+                    <div class="panel-header">
+                        <span style="color:#a855f7">🎹</span> SUNO AI STYLE PROMPT
+                    </div>
+                    <div class="prompt-container">
+                        {ai.get('suno_prompt', 'Generating prompt...')}
+                    </div>
+                    <div style="margin-top:10px; font-size:0.75rem; color:#666;">
+                        COPY THIS PROMPT DIRECTLY INTO SUNO V3
+                    </div>
+                </div>
+            """, unsafe_allow_html=True)
+
+        with t_col:
+            tips_html = ""
+            for i, tip in enumerate(ai.get('tips', [])):
+                tips_html += f"""
+                <div class="tip-item">
+                    <div class="tip-num">{i+1}</div>
+                    <div class="tip-text">{tip}</div>
+                </div>
+                """
+            
+            st.markdown(f"""
+                <div class="glass-panel">
+                    <div class="panel-header">💡 PRO TIPS</div>
+                    {tips_html}
+                </div>
+            """, unsafe_allow_html=True)
+
+        # 4. LYRIC STUDIO PLACEHOLDER
+        st.markdown("<br>", unsafe_allow_html=True)
+        st.markdown(f"""
+            <div class="glass-panel" style="border: 1px dashed #333; text-align:center; padding: 40px;">
+                <h3 style="margin:0; color:#fff;">LYRIC STUDIO</h3>
+                <p style="color:#666; font-size:0.8rem; margin-bottom:20px;">GENERATE LYRICS MATCHING THIS STYLE</p>
+                <div style="display:inline-block; padding: 10px 20px; background:#222; border-radius:8px; color:#555; font-size:0.8rem;">
+                    COMING SOON
+                </div>
+            </div>
+        """, unsafe_allow_html=True)
+
+        # 5. RESET BUTTON
+        st.markdown("<br>", unsafe_allow_html=True)
+        if st.button("⬅ ANALYZE NEW TRACK", use_container_width=True):
             st.session_state.song_data = None
             st.session_state.analysis = None
             st.rerun()
