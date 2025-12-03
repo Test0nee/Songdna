@@ -4,6 +4,7 @@ from shazamio import Shazam
 import google.generativeai as genai
 import tempfile
 import os
+import requests
 
 # --- 1. CONFIGURATION ---
 st.set_page_config(
@@ -18,13 +19,21 @@ st.markdown("""
     <style>
     /* RESET & DARK THEME */
     .stApp {
-        background-color: #000;
+        background-color: #000000;
     }
+    
+    /* NUCLEAR PADDING REMOVAL */
     .block-container {
-        padding: 0 !important;
+        padding-top: 0rem !important;
+        padding-bottom: 0rem !important;
+        padding-left: 0rem !important;
+        padding-right: 0rem !important;
         max-width: 100% !important;
     }
-    header, footer { display: none !important; }
+    
+    /* HIDE HEADER/FOOTER */
+    header[data-testid="stHeader"] {display: none;}
+    footer {display: none;}
 
     /* KINETIC BACKGROUND */
     .kinetic-wrapper {
@@ -38,6 +47,7 @@ st.markdown("""
         width: 250px; height: 150px; background-color: #111;
         border-radius: 8px; background-size: cover; background-position: center;
         flex-shrink: 0; border: 1px solid rgba(255,255,255,0.1);
+        opacity: 0.8;
     }
     
     /* ANIMATIONS */
@@ -63,12 +73,13 @@ st.markdown("""
         font-size: 4rem !important; text-align: center; color: white; margin: 0;
     }
     .subtitle {
-        text-align: center; color: #888; font-family: monospace; letter-spacing: 4px; margin-bottom: 40px;
+        text-align: center; color: #888; font-family: monospace; letter-spacing: 4px; margin-bottom: 40px; text-transform: uppercase;
     }
     
-    /* CUSTOM STREAMLIT ELEMENTS */
+    /* BUTTONS & UPLOAD */
     .stFileUploader { padding: 20px; border: 1px dashed rgba(255,255,255,0.2); border-radius: 12px; }
-    .stButton button { width: 100%; border-radius: 8px; font-weight: bold; text-transform: uppercase; }
+    div.stButton > button { width: 100%; border-radius: 8px; font-weight: bold; text-transform: uppercase; background: white; color: black; border: none; padding: 12px; }
+    div.stButton > button:hover { transform: scale(1.02); background: #eee; }
     </style>
     
     <div class="kinetic-wrapper">
@@ -79,6 +90,7 @@ st.markdown("""
             <div class="marquee-item" style="background-image: url('https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=400')"></div>
             <div class="marquee-item" style="background-image: url('https://images.unsplash.com/photo-1511379938547-c1f69419868d?w=400')"></div>
             <div class="marquee-item" style="background-image: url('https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=400')"></div>
+            <div class="marquee-item" style="background-image: url('https://images.unsplash.com/photo-1493225255756-d9584f8606e9?w=400')"></div>
         </div>
         <div class="marquee-row scroll-right">
             <div class="marquee-item" style="background-image: url('https://images.unsplash.com/photo-1501612780327-45045538702b?w=400')"></div>
@@ -86,18 +98,27 @@ st.markdown("""
             <div class="marquee-item" style="background-image: url('https://images.unsplash.com/photo-1498038432885-c6f3f1b912ee?w=400')"></div>
             <div class="marquee-item" style="background-image: url('https://images.unsplash.com/photo-1520523839897-bd0b52f945a0?w=400')"></div>
             <div class="marquee-item" style="background-image: url('https://images.unsplash.com/photo-1501612780327-45045538702b?w=400')"></div>
+            <div class="marquee-item" style="background-image: url('https://images.unsplash.com/photo-1459749411177-0473ef71607b?w=400')"></div>
+        </div>
+         <div class="marquee-row scroll-left">
+            <div class="marquee-item" style="background-image: url('https://images.unsplash.com/photo-1511735111813-97415a4ed839?w=400')"></div>
+            <div class="marquee-item" style="background-image: url('https://images.unsplash.com/photo-1506157786151-b8491531f525?w=400')"></div>
+            <div class="marquee-item" style="background-image: url('https://images.unsplash.com/photo-1508700115892-45ecd05ae2ad?w=400')"></div>
+            <div class="marquee-item" style="background-image: url('https://images.unsplash.com/photo-1485579149621-3123dd979885?w=400')"></div>
+            <div class="marquee-item" style="background-image: url('https://images.unsplash.com/photo-1511735111813-97415a4ed839?w=400')"></div>
+            <div class="marquee-item" style="background-image: url('https://images.unsplash.com/photo-1506157786151-b8491531f525?w=400')"></div>
         </div>
     </div>
 """, unsafe_allow_html=True)
 
-# --- 3. LOGIC (THE EAR & BRAIN) ---
+# --- 3. LOGIC ---
 
-# Get API Key from Secrets (Setup on Streamlit Cloud)
-api_key = st.secrets.get("GEMINI_API_KEY") 
+# 1. SETUP KEYS
+api_key = st.secrets.get("GEMINI_API_KEY")
 if api_key:
     genai.configure(api_key=api_key)
 
-# Wrapper for Async functions
+# 2. ASYNC WRAPPER
 def run_async(coroutine):
     try:
         loop = asyncio.get_event_loop()
@@ -106,6 +127,23 @@ def run_async(coroutine):
         asyncio.set_event_loop(loop)
     return loop.run_until_complete(coroutine)
 
+# 3. DEEZER FETCH (THE "EYE")
+async def fetch_artist_image(artist):
+    if not artist: return None
+    # Clean the name (Tiësto & Karol G -> Tiësto)
+    clean_artist = artist.split(',')[0].split('&')[0].split('feat')[0].strip()
+    try:
+        # Use CORS Proxy for safety (even though Python handles CORS better)
+        url = f"https://api.deezer.com/search/artist?q={clean_artist}"
+        r = requests.get(url, timeout=5) # Direct request works in Python!
+        data = r.json()
+        if 'data' in data and data['data']:
+            return data['data'][0]['picture_xl']
+    except:
+        return None
+    return None
+
+# 4. SHAZAM IDENTIFY (THE "EAR")
 async def identify_song(file_path):
     shazam = Shazam()
     try:
@@ -117,8 +155,6 @@ async def identify_song(file_path):
                 "found": True,
                 "title": track.get('title'),
                 "artist": track.get('subtitle'),
-                # ShazamIO gives us the High-Res Artist Image for free!
-                "artist_bg": images.get('background'), 
                 "album_art": images.get('coverart'),
                 "genre": track.get('genres', {}).get('primary')
             }
@@ -126,6 +162,7 @@ async def identify_song(file_path):
     except Exception as e:
         return {"found": False, "error": str(e)}
 
+# 5. GEMINI ANALYZE (THE "BRAIN")
 def analyze_gemini(song_data):
     if not api_key: return "⚠️ Please add GEMINI_API_KEY to Streamlit Secrets."
     model = genai.GenerativeModel('gemini-1.5-flash')
@@ -168,6 +205,9 @@ def main():
                 os.remove(tmp_path)
                 
                 if result['found']:
+                    # Fetch Artist Image
+                    img = run_async(fetch_artist_image(result['artist']))
+                    result['artist_bg'] = img
                     st.session_state.song_data = result
                     st.rerun()
                 else:
