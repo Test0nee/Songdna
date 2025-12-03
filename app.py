@@ -11,7 +11,7 @@ st.set_page_config(
     page_title="SunoSonic",
     page_icon="🎹",
     layout="wide",
-    initial_sidebar_state="collapsed" # Force sidebar to hide
+    initial_sidebar_state="collapsed"
 )
 
 # --- 2. SUPERIOR UI (CSS) ---
@@ -27,14 +27,14 @@ st.markdown("""
     .block-container {
         padding-top: 5vh !important;
         padding-bottom: 5vh !important;
-        max-width: 900px !important; /* Tighter focus like Google Studio */
+        max-width: 900px !important;
     }
     
     /* 3. HIDE JUNK */
     header[data-testid="stHeader"] {display: none;}
     footer {display: none;}
     #MainMenu {visibility: hidden;}
-    [data-testid="stSidebar"] {display: none;} /* Nuke the sidebar completely */
+    [data-testid="stSidebar"] {display: none;}
 
     /* 4. KINETIC BACKGROUND */
     .kinetic-wrapper {
@@ -57,7 +57,7 @@ st.markdown("""
     .scroll-left { animation: scrollLeft 50s linear infinite; }
     .scroll-right { animation: scrollRight 50s linear infinite; }
 
-    /* 5. GLASS PANEL (The Hero) */
+    /* 5. GLASS PANEL */
     .glass-panel {
         position: relative; z-index: 10;
         background: rgba(18, 18, 18, 0.85);
@@ -79,7 +79,7 @@ st.markdown("""
         margin-bottom: 50px; text-transform: uppercase; font-size: 0.8rem;
     }
     
-    /* Uploader Styling */
+    /* Uploader */
     .stFileUploader { 
         padding: 30px; 
         border: 2px dashed rgba(255,255,255,0.1); 
@@ -185,7 +185,13 @@ async def identify_song(file_path):
 # 5. GEMINI ANALYZE
 def analyze_gemini(song_data):
     if not api_key: return "⚠️ Please add GEMINI_API_KEY to Streamlit Secrets."
-    model = genai.GenerativeModel('gemini-1.5-flash')
+    
+    # --- UPDATED MODEL TO 2.5 ---
+    try:
+        model = genai.GenerativeModel('gemini-2.5-flash')
+    except:
+        # Fallback to older model only if 2.5 fails
+        model = genai.GenerativeModel('gemini-2.0-flash-lite')
     
     prompt = f"""
     Act as a Music Producer. Analyze "{song_data['title']}" by "{song_data['artist']}".
@@ -215,13 +221,11 @@ def main():
         uploaded_file = st.file_uploader("DROP AUDIO FILE HERE", type=['mp3', 'wav', 'ogg'])
         
         if uploaded_file:
-            with st.spinner("🎧 ANALYZING AUDIO SPECTYROGRAM..."):
-                # Save temp file
+            with st.spinner("🎧 ANALYZING AUDIO SPECTROGRAM..."):
                 with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as tmp:
                     tmp.write(uploaded_file.getvalue())
                     tmp_path = tmp.name
                 
-                # Run Logic
                 result = run_async(identify_song(tmp_path))
                 os.remove(tmp_path)
                 
@@ -237,10 +241,7 @@ def main():
     else:
         data = st.session_state.song_data
         
-        # Images
         bg_img = data.get('artist_bg') or data.get('album_art')
-        
-        # Hero Image
         if bg_img:
             st.image(bg_img, use_container_width=True)
             
@@ -252,12 +253,10 @@ def main():
             analysis = analyze_gemini(data)
             st.info(analysis)
 
-        # Reset
         if st.button("⬅ SCAN NEW TRACK"):
             st.session_state.song_data = None
             st.rerun()
 
-    # End Glass Panel
     st.markdown('</div>', unsafe_allow_html=True)
 
 if __name__ == "__main__":
