@@ -1,4 +1,5 @@
 import streamlit as st
+import streamlit.components.v1 as components
 import asyncio
 from shazamio import Shazam
 import google.generativeai as genai
@@ -20,7 +21,7 @@ SPOTIFY_CLIENT_SECRET = st.secrets.get("SPOTIFY_CLIENT_SECRET")
 def get_spotify_token():
     if not SPOTIFY_CLIENT_ID or not SPOTIFY_CLIENT_SECRET:
         return None
-    url = "https://accounts.spotify.com/api/token" # Fixed URL
+    url = "https://accounts.spotify.com/api/token" # Corrected URL
     headers = {"Content-Type": "application/x-www-form-urlencoded"}
     data = {"grant_type": "client_credentials"}
     try:
@@ -93,6 +94,7 @@ st.markdown("""
     .glow-cyan { box-shadow: 0 0 40px -10px rgba(56, 189, 248, 0.18); border-top: 1px solid rgba(56, 189, 248, 0.35); }
     .glow-pink { box-shadow: 0 0 40px -10px rgba(236, 72, 153, 0.18); border-top: 1px solid rgba(236, 72, 153, 0.35); }
     .glow-purple { box-shadow: 0 0 40px -10px rgba(129, 140, 248, 0.25); border-top: 1px solid rgba(129, 140, 248, 0.4); }
+    
     .panel-header { display: flex; align-items: center; gap: 10px; margin-bottom: 20px; font-size: 0.8rem; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: #6b7280; }
     .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
     .stat-box { background: rgba(15,23,42,0.95); padding: 15px; border-radius: 12px; border: 1px solid rgba(31,41,55,1); }
@@ -100,29 +102,6 @@ st.markdown("""
     .stat-value { font-size: 1.1rem; font-weight: 600; color: #f9fafb; }
     .small-tag { font-size: 0.75rem; padding: 4px 10px; background: #020617; border-radius: 6px; color: #9ca3af; border: 1px solid #1f2937; margin-right: 5px; }
 
-    /* VISUALIZER PANEL STYLES */
-    .viz-panel {
-        background: #020617;
-        border-radius: 24px;
-        border: 1px solid #1f2937;
-        padding: 22px;
-        margin-top: 10px;
-        box-shadow: 0 24px 60px rgba(15,23,42,0.85);
-        position: relative;
-        overflow: hidden;
-    }
-    .viz-panel::before {
-        content: "";
-        position: absolute; inset: 0;
-        background: radial-gradient(circle at 0% 0%, rgba(56,189,248,0.15), transparent 55%), radial-gradient(circle at 100% 0%, rgba(236,72,153,0.15), transparent 55%);
-        opacity: 0.7; pointer-events: none;
-    }
-    .viz-header-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
-    .viz-title-wrap { display: flex; align-items: center; gap: 10px; }
-    .viz-icon { width: 32px; height: 32px; border-radius: 12px; background: radial-gradient(circle at 0% 0%, #22d3ee, #6366f1); display: flex; align-items: center; justify-content: center; box-shadow: 0 0 20px rgba(59,130,246,0.8); border: 1px solid rgba(15,23,42,0.9); }
-    .viz-title { font-size: 0.95rem; letter-spacing: 0.18em; text-transform: uppercase; color: #e5e7eb; font-weight: 600; }
-    .viz-chart-frame { border-radius: 18px; background: radial-gradient(circle at 0% 0%, rgba(15,23,42,0.5), rgba(15,23,42,0.95)); padding: 10px; border: 1px solid rgba(31,41,55,1); }
-    
     /* PROMPT BOX */
     .prompt-container { font-family: 'JetBrains Mono', monospace; background: #020617; border: 1px solid #1f2937; color: #22d3ee; padding: 20px; border-radius: 12px; font-size: 0.9rem; line-height: 1.6; }
     .tip-item { display: flex; gap: 15px; margin-bottom: 15px; }
@@ -169,7 +148,8 @@ async def fetch_artist_image(artist):
     if token:
         try:
             headers = {"Authorization": f"Bearer {token}"}
-            url = f"https://api.spotify.com/v1/search?q={clean_artist}&type=artist&limit=1" # Fixed URL
+            # Search for Artist
+            url = f"https://api.spotify.com/v1/search?q={clean_artist}&type=artist&limit=1"
             r = requests.get(url, headers=headers, timeout=5)
             data = r.json()
             items = data.get("artists", {}).get("items", [])
@@ -187,7 +167,7 @@ async def fetch_artist_image(artist):
 
 def extract_audio_features(file_path):
     try:
-        y, sr = librosa.load(file_path, sr=None)
+        y, sr = librosa.load(file_path, sr=None, duration=180) # Analyze up to 3 mins
         duration_sec = librosa.get_duration(y=y, sr=sr)
         duration_str = f"{int(duration_sec // 60)}:{int(round(duration_sec % 60)):02d}"
         tempo, _ = librosa.beat.beat_track(y=y, sr=sr)
@@ -350,10 +330,8 @@ def main():
             </div>
         """, unsafe_allow_html=True)
         
-        # PLAYER
         if st.session_state.get("uploaded_bytes"): st.audio(st.session_state.uploaded_bytes, format="audio/mp3")
         
-        # GRID
         st.markdown("<br>", unsafe_allow_html=True)
         c1, c2 = st.columns(2)
         with c1:
@@ -362,36 +340,70 @@ def main():
         with c2:
             st.markdown(f"""<div class="glass-panel glow-pink"><div class="panel-header"><span style="color:#ec4899">🎙</span> VOCAL ARCHITECTURE</div><div class="stat-grid"><div class="stat-box"><div class="stat-label">TYPE</div><div class="stat-value">{ai.get('vocal_type')}</div></div><div class="stat-box"><div class="stat-label">STYLE</div><div class="stat-value">{ai.get('vocal_style')}</div></div></div></div>""", unsafe_allow_html=True)
 
-        # PLOTLY VISUALIZER
         st.markdown("<br>", unsafe_allow_html=True)
         
-        # Generate chart data (simulated but looks real)
+        # --- PLOTLY VISUALIZER (IN A COMPONENT TO PREVENT BREAKING) ---
         spikiness = 2.5 if "High" in data.get("energy", "") else 0.8
         chart_data = pd.DataFrame(np.random.randn(200, 3) * spikiness, columns=["L", "R", "RMS"])
         
-        # Plotly Chart
         fig = go.Figure()
-        fig.add_trace(go.Scatter(y=chart_data['L'], mode='lines', name='L', line=dict(color='#22d3ee', width=1.5)))
-        fig.add_trace(go.Scatter(y=chart_data['R'], mode='lines', name='R', line=dict(color='#6366f1', width=1.5)))
+        fig.add_trace(go.Scatter(y=chart_data['L'], mode='lines', name='L', line=dict(color='#22d3ee', width=1.5), fill=None))
+        fig.add_trace(go.Scatter(y=chart_data['R'], mode='lines', name='R', line=dict(color='#6366f1', width=1.5), fill=None))
         fig.add_trace(go.Scatter(y=chart_data['RMS'], mode='lines', name='RMS', line=dict(color='#ec4899', width=2), fill='tozeroy'))
         
         fig.update_layout(
-            paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(15,23,42,0.3)',
-            margin=dict(l=0, r=0, t=0, b=0),
+            paper_bgcolor='#020617', plot_bgcolor='#020617',
+            margin=dict(l=0, r=0, t=20, b=0),
             xaxis=dict(showgrid=True, gridcolor='rgba(255,255,255,0.05)', showticklabels=False),
             yaxis=dict(showgrid=True, gridcolor='rgba(255,255,255,0.05)', showticklabels=False),
-            height=180, showlegend=False
+            height=200, showlegend=False, autosize=True
         )
         
-        st.markdown(f"""
+        # Generate HTML for the Component
+        plot_html = fig.to_html(full_html=False, include_plotlyjs='cdn', config={'displayModeBar': False})
+        
+        # We embed the whole card structure inside the component iframe for perfect encapsulation
+        components.html(f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+            <style>
+                body {{ margin: 0; background-color: transparent; font-family: 'Inter', sans-serif; overflow: hidden; }}
+                .viz-panel {{
+                    background: #020617;
+                    border-radius: 20px;
+                    border: 1px solid #1f2937;
+                    padding: 20px;
+                    box-sizing: border-box;
+                    box-shadow: 0 24px 60px rgba(15,23,42,0.85);
+                    position: relative;
+                }}
+                .viz-panel::before {{
+                    content: ""; position: absolute; inset: 0;
+                    background: radial-gradient(circle at 0% 0%, rgba(56,189,248,0.1), transparent 60%), radial-gradient(circle at 100% 0%, rgba(236,72,153,0.1), transparent 60%);
+                    opacity: 0.8; pointer-events: none; border-radius: 20px;
+                }}
+                .viz-header {{ display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }}
+                .viz-icon {{ width: 28px; height: 28px; border-radius: 8px; background: linear-gradient(135deg, #22d3ee, #6366f1); display: flex; align-items: center; justify-content: center; font-size: 14px; box-shadow: 0 0 15px rgba(34,211,238,0.6); }}
+                .viz-title {{ color: #e5e7eb; font-weight: 700; font-size: 12px; letter-spacing: 2px; text-transform: uppercase; }}
+                .viz-chart-container {{ border-radius: 12px; background: rgba(15,23,42,0.6); border: 1px solid #374151; overflow: hidden; }}
+            </style>
+        </head>
+        <body>
             <div class="viz-panel">
-                <div class="viz-header-row"><div class="viz-title-wrap"><div class="viz-icon"><span>📈</span></div><div class="viz-title">STRUCTURAL DYNAMICS & RMS</div></div></div>
-                <div class="viz-chart-frame">
-        """, unsafe_allow_html=True)
-        st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
-        st.markdown("</div></div>", unsafe_allow_html=True)
+                <div class="viz-header">
+                    <div class="viz-icon">📈</div>
+                    <div class="viz-title">STRUCTURAL DYNAMICS & RMS</div>
+                </div>
+                <div class="viz-chart-container">
+                    {plot_html}
+                </div>
+            </div>
+        </body>
+        </html>
+        """, height=320, scrolling=False)
 
-        # PROMPT & LYRICS (Keep your existing layout)
         st.markdown("<br>", unsafe_allow_html=True)
         # ... (Rest of your UI logic remains the same) ...
         p_col, t_col = st.columns([1.5, 1])
