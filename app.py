@@ -81,13 +81,12 @@ st.markdown("""
         margin-top: 4px;
     }
     
-    /* LINK-LIKE BUTTON */
     .top-action {
         text-align: center;
         margin: 10px 0 24px 0;
     }
 
-    /* HERO SECTION - CARD STYLE LIKE YOUR MOCKUP */
+    /* HERO SECTION - FULL BACKGROUND (NO SQUARE COVER) */
     .hero-wrapper {
         position: relative;
         border-radius: 28px;
@@ -109,7 +108,7 @@ st.markdown("""
         position: absolute; 
         inset: 0;
         background:
-            linear-gradient(to top, rgba(15,23,42,0.95) 0%, rgba(15,23,42,0.85) 32%, rgba(15,23,42,0.35) 65%, rgba(15,23,42,0.0) 100%),
+            linear-gradient(to top, rgba(15,23,42,0.96) 0%, rgba(15,23,42,0.82) 32%, rgba(15,23,42,0.42) 65%, rgba(15,23,42,0.0) 100%),
             radial-gradient(circle at 0% 0%, rgba(59,130,246,0.25), transparent 55%),
             radial-gradient(circle at 100% 0%, rgba(236,72,153,0.25), transparent 55%);
         display: flex; 
@@ -151,7 +150,7 @@ st.markdown("""
         box-shadow: 0 0 10px rgba(34,197,94,0.9);
     }
     .artist-title { 
-        font-size: 3.2rem; 
+        font-size: 3.1rem; 
         font-weight: 900; 
         line-height: 0.95; 
         margin: 10px 0 4px 0; 
@@ -164,7 +163,7 @@ st.markdown("""
         text-overflow: ellipsis;
     }
     .song-subtitle { 
-        font-size: 1.3rem; 
+        font-size: 1.25rem; 
         color: #cbd5f5; 
         margin-bottom: 18px; 
         letter-spacing: -0.3px; 
@@ -310,7 +309,7 @@ st.markdown("""
         border-radius: 50%; 
         font-size: 0.7rem; 
     }
-    
+
     /* LYRIC STUDIO */
     .lyric-area textarea { 
         background: #020617 !important; 
@@ -328,6 +327,28 @@ st.markdown("""
         color: #a78bfa; 
         height: 300px; 
         overflow-y: auto; 
+    }
+
+    /* MODERNIZE STREAMLIT AUDIO PLAYER */
+    [data-testid="stAudio"] > div {
+        background: #020617;
+        border-radius: 999px;
+        padding: 10px 18px;
+        box-shadow: 0 14px 40px rgba(15,23,42,0.9);
+        border: 1px solid #1f2937;
+    }
+    [data-testid="stAudio"] audio {
+        width: 100%;
+        filter: saturate(1.1);
+    }
+
+    /* WebKit-specific timeline color tweak (Chrome / Edge) */
+    audio::-webkit-media-controls-panel {
+        background: #020617;
+    }
+    audio::-webkit-media-controls-current-time-display,
+    audio::-webkit-media-controls-time-remaining-display {
+        color: #e5e7eb;
     }
 
     /* UPLOAD */
@@ -365,6 +386,11 @@ def run_async(coroutine):
 
 
 async def fetch_artist_image(artist):
+    """
+    Get a wide artist image for the hero background.
+    We use Deezer's artist search as a lightweight, no-auth way to get something
+    visually similar to Spotify / Apple hero banners.
+    """
     if not artist:
         return "https://images.unsplash.com/photo-1514525253440-b393452e8d26?w=1600"
     clean_artist = artist.split(',')[0].split('&')[0].split('feat')[0].strip()
@@ -373,6 +399,7 @@ async def fetch_artist_image(artist):
         r = requests.get(url, timeout=5)
         data = r.json()
         if 'data' in data and data['data']:
+            # Deezer artist picture is already more banner-like than a square cover
             return data['data'][0]['picture_xl']
     except Exception:
         return "https://images.unsplash.com/photo-1514525253440-b393452e8d26?w=1600"
@@ -392,25 +419,21 @@ def extract_audio_features(file_path):
     - Duration (mm:ss)
     """
     try:
-        # Load full audio for better duration
         y, sr = librosa.load(file_path, sr=None)
         duration_sec = librosa.get_duration(y=y, sr=sr)
         minutes = int(duration_sec // 60)
         seconds = int(round(duration_sec % 60))
         duration_str = f"{minutes}:{seconds:02d}"
 
-        # 1. TEMPO (BPM)
         tempo, _ = librosa.beat.beat_track(y=y, sr=sr)
         bpm = round(float(tempo)) if float(tempo) > 0 else 0
 
-        # 2. KEY DETECTION (rough)
         chroma = librosa.feature.chroma_cqt(y=y, sr=sr)
         chroma_vals = np.sum(chroma, axis=1)
         pitches = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']
         key_idx = int(np.argmax(chroma_vals))
         key = pitches[key_idx]
 
-        # 3. SPECTRAL CENTROID (Brightness/Timbre)
         spectral_centroids = librosa.feature.spectral_centroid(y=y, sr=sr)[0]
         avg_centroid = float(np.mean(spectral_centroids))
         if avg_centroid > 3000:
@@ -420,7 +443,6 @@ def extract_audio_features(file_path):
         else:
             brightness = "Dark / Mellow"
 
-        # 4. RMS ENERGY (Loudness/Intensity)
         rms = librosa.feature.rms(y=y)[0]
         avg_energy = float(np.mean(rms))
         if avg_energy > 0.1:
@@ -430,10 +452,8 @@ def extract_audio_features(file_path):
         else:
             intensity = "Low / Chill"
 
-        # 5. Harmonic / Percussive separation
         harmonic, percussive = librosa.effects.hpss(y)
 
-        # 6. Simple vocal presence heuristic
         S = np.abs(librosa.stft(harmonic, n_fft=2048, hop_length=512))
         freqs = librosa.fft_frequencies(sr=sr, n_fft=2048)
         voice_band = (freqs >= 300) & (freqs <= 3400)
@@ -452,7 +472,6 @@ def extract_audio_features(file_path):
         else:
             vocals_flag = "Unclear, mixed or subtle vocals"
 
-        # 7. Percussive vs harmonic energy hint
         perc_level = float(np.mean(np.abs(percussive)))
         harm_level = float(np.mean(np.abs(harmonic))) + 1e-9
         perc_ratio = perc_level / harm_level
@@ -522,21 +541,9 @@ You only know these audio features:
 - Duration: {song_data.get('duration', 'Unknown')}
 - Vocal presence heuristic: {song_data.get('vocals', 'Unknown')} (voice band ratio {song_data.get('voice_ratio', 0)})
 
-Use the vocal heuristic as a strong hint:
-- If it says "Likely Vocals", assume there are clear vocals.
-- If it says "Probably Instrumental / Background", assume the track can be treated as instrumental with no lead vocal.
-- If "Unclear", you can choose either light vocals or instrumental.
+Use the vocal heuristic as a strong hint.
 
-Based on all this, infer:
-
-1. A single-word primary mood.
-2. A concise genre.
-3. A short list of likely main instruments.
-4. Vocal type and style.
-5. A compact Suno-style prompt (1–2 sentences).
-6. 2–3 very short tips.
-
-Return ONLY valid JSON in this exact structure:
+Based on all this, infer and return ONLY valid JSON in this structure:
 
 {{
   "mood": "single word",
@@ -559,19 +566,9 @@ Return ONLY valid JSON in this exact structure:
 You are an AI assistant specialized in music analysis and AI music prompting.
 
 Analyze the song "{song_data['title']}" by "{song_data['artist']}".
-Based on typical information about this track (if known) or reasonable assumptions from the artist and title,
-infer:
+Infer mood, genre, tempo, key, instruments, vocal type/style and a Suno-ready style prompt.
 
-- Single-word mood.
-- Concise genre.
-- Tempo (string, like "120 BPM").
-- Key.
-- Main instruments.
-- Vocal type and style.
-- A short Suno-ready style prompt (1–2 sentences).
-- 2–3 short tips.
-
-Return ONLY valid JSON in this exact structure:
+Return ONLY valid JSON in this structure:
 
 {{
   "mood": "single word",
@@ -625,10 +622,8 @@ CONTEXT:
 - Official Tag Dictionary: {SUNO_TAGS}
 
 TASK:
-Insert structural tags like [Intro], [Verse], [Chorus], [Bridge], [Outro], etc, into the following lyrics
-so they are ready for use in Suno or similar AI music generators.
-
-Only return the tagged lyrics, no explanation.
+Insert structural tags like [Intro], [Verse], [Chorus], [Bridge], [Outro], etc, into the following lyrics.
+Return only the tagged lyrics.
 
 LYRICS:
 {raw_lyrics}
@@ -754,10 +749,8 @@ def main():
                 st.session_state.uploaded_bytes = None
                 st.rerun()
 
-        # HERO CARD
-        hero_bg = data.get('artist_bg') or data.get('album_art')
-        hero_bg = hero_bg or "https://images.unsplash.com/photo-1511379938547-c1f69419868d?w=1600"
-
+        # HERO CARD – full background image (no square cover)
+        hero_bg = data.get('artist_bg') or "https://images.unsplash.com/photo-1511379938547-c1f69419868d?w=1600"
         st.markdown(f"""
             <div class="hero-wrapper">
                 <img src="{hero_bg}" class="hero-bg">
@@ -786,7 +779,7 @@ def main():
             </div>
         """, unsafe_allow_html=True)
 
-        # AUDIO PLAYER
+        # AUDIO PLAYER (now wrapped and styled by our CSS)
         if st.session_state.get("uploaded_bytes"):
             st.audio(st.session_state.uploaded_bytes, format="audio/mp3")
 
