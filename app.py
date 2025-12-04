@@ -39,14 +39,13 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# --- UI CSS (DEFAULT THEME) ---
+# --- UI CSS ---
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=JetBrains+Mono:wght@400;700&display=swap');
     
     .stApp {
         background-color: #050505;
-        /* Default fallback gradient */
         background-image: radial-gradient(circle at 50% 0%, #1e1b4b 0%, #020617 60%);
         font-family: 'Inter', sans-serif;
         color: #fff;
@@ -130,6 +129,13 @@ st.markdown("""
     .brand-title { font-size: 2.6rem; font-weight: 900; letter-spacing: 0.24em; text-transform: uppercase; margin: 0; text-shadow: 0 0 35px rgba(59,130,246,0.5); }
     .brand-subtitle { font-size: 0.78rem; letter-spacing: 0.32em; text-transform: uppercase; color: #6b7280; margin-top: 4px; }
     .top-action { text-align: center; margin: 10px 0 24px 0; }
+    
+    /* REMIX STATION */
+    .remix-box {
+        background: linear-gradient(90deg, rgba(124, 58, 237, 0.1), rgba(59, 130, 246, 0.1));
+        border: 1px solid rgba(139, 92, 246, 0.3);
+        border-radius: 16px; padding: 20px; margin-bottom: 20px;
+    }
     </style>
 """, unsafe_allow_html=True)
 
@@ -168,22 +174,17 @@ async def fetch_artist_image(artist):
     return "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=1200"
 
 def extract_dominant_color(image_url):
-    """
-    Downloads the image and finds the average color.
-    Returns an RGB tuple (r, g, b).
-    """
     try:
-        if not image_url: return (30, 27, 75) # Default Dark Blue
+        if not image_url: return (30, 27, 75)
         response = requests.get(image_url, timeout=5)
         img = Image.open(BytesIO(response.content)).convert('RGB')
-        # Resize to 1x1 pixel to get average
         img = img.resize((1, 1))
         color = img.getpixel((0, 0))
         return color
     except:
-        return (56, 189, 248) # Default Cyan
+        return (56, 189, 248)
 
-# --- 5. AUDIO ENGINE (FIXED) ---
+# --- 5. AUDIO ENGINE ---
 def safe_load_audio(file_path):
     errors = []
     try:
@@ -207,7 +208,6 @@ def extract_audio_features(file_path):
     if error: return {"success": False, "error": error}
 
     duration = librosa.get_duration(y=y, sr=sr)
-    
     try:
         tempo, _ = librosa.beat.beat_track(y=y, sr=sr)
         if np.ndim(tempo) > 0: tempo = tempo[0]
@@ -259,13 +259,37 @@ async def identify_song(file_path):
     except: pass
     return {"found": False}
 
-def analyze_gemini(data):
+# --- AI BRAIN (WITH INTENT MODIFIER) ---
+def analyze_gemini(data, intent="Original Style (Analysis)"):
     if not api_key: return None
     model = genai.GenerativeModel("gemini-2.5-flash")
+    
     prompt = f"""
-    Analyze song: {data.get('title','Unknown')} by {data.get('artist','Unknown')}.
-    Tech: {data.get('bpm')} BPM, Key {data.get('key')}, {data.get('energy')} Energy.
-    Output JSON: {{ "mood": "...", "genre": "...", "instruments": ["..."], "vocal_type": "...", "vocal_style": "...", "suno_prompt": "...", "tips": ["..."] }}
+    Act as a Music Producer.
+    
+    SOURCE AUDIO DNA:
+    - Song: {data.get('title','Unknown')} by {data.get('artist','Unknown')}
+    - BPM: {data.get('bpm')}
+    - Key: {data.get('key')}
+    - Energy: {data.get('energy')}
+    
+    USER INTENT (MODIFIER): "{intent}"
+    
+    TASK:
+    Create a Suno v3 Prompt based on the Source Audio but MODIFIED by the User Intent.
+    If Intent is 'Original', just describe the song accurately.
+    If Intent is different (e.g. 'Make it 80s'), MORPH the prompt (e.g. change BPM, instruments) to fit the new vibe while keeping the song's soul.
+    
+    OUTPUT JSON:
+    {{
+        "mood": "Modified Mood",
+        "genre": "Modified Genre",
+        "instruments": ["Inst1", "Inst2"],
+        "vocal_type": "Vocal Style",
+        "vocal_style": "Processing details",
+        "suno_prompt": "The final prompt ready for Suno",
+        "tips": ["Tip 1", "Tip 2"]
+    }}
     """
     try: return json.loads(model.generate_content(prompt).text.replace("```json","").replace("```",""))
     except: return None
@@ -307,7 +331,7 @@ def main():
                 full_data['color_rgb'] = extract_dominant_color(img_url)
 
                 st.session_state.data = full_data
-                st.session_state.ai = analyze_gemini(full_data)
+                st.session_state.ai = analyze_gemini(full_data) # Initial Analysis
                 os.remove(tmp_path)
                 st.rerun()
 
@@ -315,7 +339,7 @@ def main():
         d = st.session_state.data
         ai = st.session_state.ai or {}
         
-        # --- DYNAMIC BACKGROUND INJECTION ---
+        # --- DYNAMIC BACKGROUND ---
         rgb = d.get('color_rgb', (30, 27, 75))
         st.markdown(f"""
             <style>
@@ -329,7 +353,7 @@ def main():
             </style>
         """, unsafe_allow_html=True)
 
-        # --- NEW HERO BANNER ---
+        # --- HERO BANNER ---
         img_url = d.get('img') or d.get('artist_bg') or "https://images.unsplash.com/photo-1470225620780-dba8ba36b745"
         
         st.markdown(f"""
@@ -407,6 +431,29 @@ def main():
 
         st.markdown("<br>", unsafe_allow_html=True)
 
+        # --- STYLE REMIX STATION (NEW) ---
+        st.markdown('<div class="panel-title">🎛️ STYLE REMIXER (MODIFY INTENT)</div>', unsafe_allow_html=True)
+        st.markdown('<div class="remix-box">', unsafe_allow_html=True)
+        
+        rc1, rc2 = st.columns([1, 2])
+        with rc1:
+            intent_preset = st.selectbox(
+                "Choose Vibe Preset", 
+                ["Original Analysis", "More Energetic", "Darker / Moody", "Cinematic / Epic", "80s Retro", "Acoustic / Stripped", "Lofi / Chill", "Heavy / Aggressive"]
+            )
+        with rc2:
+            custom_intent = st.text_input("Or type custom intent...", placeholder="e.g. 'Cyberpunk chase scene with female vocals'")
+        
+        final_intent = custom_intent if custom_intent else intent_preset
+        
+        if st.button(f"✨ REMIX PROMPT: {final_intent}", use_container_width=True):
+            with st.spinner(f"Morphing audio DNA to '{final_intent}'..."):
+                st.session_state.ai = analyze_gemini(d, intent=final_intent)
+                st.rerun()
+        
+        st.markdown('</div>', unsafe_allow_html=True)
+
+        # PROMPT & TIPS
         c3, c4 = st.columns([1.5, 1])
         with c3:
             st.markdown(f'<div class="glass-panel"><div class="panel-title">🎹 SUNO PROMPT</div><div class="code-block">{ai.get("suno_prompt","...")}</div></div>', unsafe_allow_html=True)
