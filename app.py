@@ -278,20 +278,106 @@ async def identify_song(file_path):
         pass
     return {"found": False}
 
-def analyze_gemini(data):
+def analyze_gemini(data, intent=None):
     if not api_key:
         return None
+
+    # build intent string
+    intent_str = ""
+    if intent:
+        parts = []
+        preset = intent.get("preset")
+        custom = intent.get("custom")
+        if preset and preset != "Default / just analyze":
+            parts.append(f"Preset intent: {preset}.")
+        if custom:
+            parts.append(f"User notes: {custom}.")
+        if parts:
+            intent_str = "User wants the new Suno prompt to follow this intent: " + " ".join(parts)
+
     model = genai.GenerativeModel("gemini-2.5-flash")
+
     prompt = f"""
-    Analyze song: {data.get('title','Unknown')} by {data.get('artist','Unknown')}.
-    Tech: {data.get('bpm')} BPM, Key {data.get('key')}, {data.get('energy')} Energy.
-    Output JSON: {{ "mood": "...", "genre": "...", "instruments": ["..."], "vocal_type": "...", "vocal_style": "...", "suno_prompt": "...", "tips": ["..."] }}
+You are analyzing a reference song so the user can generate a better Suno AI music prompt.
+
+Reference track: {data.get('title','Unknown')} by {data.get('artist','Unknown')}.
+Technical profile: {data.get('bpm')} BPM, key {data.get('key')}, energy {data.get('energy')}, duration {data.get('duration')}.
+Detected section markers in seconds: {data.get('sections', [])}.
+
+{intent_str}
+
+Return ONLY valid JSON, no prose, no explanations.
+
+Use this schema:
+
+{{
+  "mood": "overall emotional mood in a few words",
+  "genre": "main high level genre, for example Electro pop",
+  "genre_mix": [
+    {{"label": "Electro pop", "percent": 40}},
+    {{"label": "Balkan urban", "percent": 30}},
+    {{"label": "Rap", "percent": 20}},
+    {{"label": "Synthwave", "percent": 10}}
+  ],
+
+  "structure": {{
+    "summary": "short human readable structure summary, for example intro, verse, pre chorus, big chorus, drop, outro",
+    "sections": [
+      {{"name": "Intro", "start": 0, "end": 12}},
+      {{"name": "Verse", "start": 12, "end": 42}},
+      {{"name": "Chorus", "start": 42, "end": 72}},
+      {{"name": "Bridge", "start": 72, "end": 96}},
+      {{"name": "Outro", "start": 96, "end": 120}}
+    ]
+  }},
+
+  "instrument_layers": [
+    "bright plucked synth lead",
+    "wide atmospheric pads",
+    "deep synth bass",
+    "punchy electronic drums",
+    "vocal harmonies in the chorus"
+  ],
+
+  "mix_profile": {{
+    "eq": "warm low end, bright top, slightly scooped mids",
+    "compression": "tight and punchy on drums, moderate on master",
+    "reverb": "wet vocals, fairly ambient space",
+    "stereo_width": "very wide in chorus, narrower in verses",
+    "dynamics": "strong contrast between verses and drops",
+    "loudness": "modern loud master suitable for streaming"
+  }},
+
+  "vocal_type": "for example male lead vocal, female lead vocal, duet, choir",
+  "vocal_style": "for example intimate, aggressive rap, belting, airy, robotic",
+
+  "emotion_tags": ["tag1", "tag2", "tag3"],
+  "persona": "short description of the vocalist persona or character",
+  "use_case": "best target use case, for example TikTok hook, gym track, movie trailer, club, study background",
+
+  "instruments": [
+    "short simple list of key instruments, for backward compatibility"
+  ],
+
+  "suno_prompts": {{
+    "safe": "safe, clean high quality prompt for Suno",
+    "creative": "more creative and hybrid version of the prompt",
+    "extreme": "very experimental and bold version of the prompt"
+  }},
+
+  "suno_prompt": "repeat the safe prompt here for backward compatibility",
+
+  "tips": [
+    "short bullet point tips for improving the next version in Suno"
+  ]
+}}
     """
+
     try:
-        txt = model.generate_content(prompt).text
-        txt = txt.replace("```json", "").replace("```", "")
-        return json.loads(txt)
-    except:
+        raw = model.generate_content(prompt).text
+        raw = raw.replace("```json", "").replace("```", "")
+        return json.loads(raw)
+    except Exception:
         return None
 
 def format_lyrics(raw, style):
@@ -310,11 +396,55 @@ def main():
         st.session_state.ai = None
     if 'lyrics' not in st.session_state:
         st.session_state.lyrics = ""
+    if 'intent_preset' not in st.session_state:
+        st.session_state.intent_preset = "Default / just analyze"
+    if 'intent_custom' not in st.session_state:
+        st.session_state.intent_custom = ""
 
     st.markdown(
         "<h1 style='text-align:center; letter-spacing:-2px; margin-bottom:10px;'>SUNOSONIC</h1>",
         unsafe_allow_html=True
     )
+
+    # reference intent controls
+    with st.container():
+        st.markdown(
+            "<div class='top-action'><span style='font-size:0.8rem; letter-spacing:0.18em; text-transform:uppercase; color:#9ca3af;'>Reference intent for the new Suno song</span></div>",
+            unsafe_allow_html=True
+        )
+        c_int1, c_int2 = st.columns([1.2, 1.8])
+        with c_int1:
+            st.session_state.intent_preset = st.selectbox(
+                "What do you want from the new song?",
+                [
+                    "Default / just analyze",
+                    "Modify the style",
+                    "More emotional",
+                    "More energetic",
+                    "More atmospheric",
+                    "More aggressive",
+                    "More minimal",
+                    "More commercial / radio friendly",
+                    "More indie",
+                    "More dark / moody"
+                ],
+                index=["Default / just analyze",
+                       "Modify the style",
+                       "More emotional",
+                       "More energetic",
+                       "More atmospheric",
+                       "More aggressive",
+                       "More minimal",
+                       "More commercial / radio friendly",
+                       "More indie",
+                       "More dark / moody"].index(st.session_state.intent_preset)
+            )
+        with c_int2:
+            st.session_state.intent_custom = st.text_input(
+                "Optional extra instruction",
+                value=st.session_state.intent_custom,
+                placeholder="For example: I want a song that sounds like this but happier, or turn this into 80s retro pop with female vocals"
+            )
 
     if not st.session_state.data:
         st.markdown(
@@ -350,7 +480,13 @@ def main():
                 full_data['color_rgb'] = extract_dominant_color(img_url)
 
                 st.session_state.data = full_data
-                st.session_state.ai = analyze_gemini(full_data)
+
+                intent_payload = {
+                    "preset": st.session_state.intent_preset,
+                    "custom": st.session_state.intent_custom
+                }
+                st.session_state.ai = analyze_gemini(full_data, intent_payload)
+
                 os.remove(tmp_path)
                 st.rerun()
 
@@ -433,6 +569,65 @@ def main():
                 </div>
             """, unsafe_allow_html=True)
 
+        # advanced structure, genre mix, mix profile, emotion
+        c_adv1, c_adv2 = st.columns(2)
+        with c_adv1:
+            genre_mix = ai.get("genre_mix", [])
+            gm_html = ""
+            if isinstance(genre_mix, list):
+                for g in genre_mix:
+                    label = g.get("label", "")
+                    pct = g.get("percent", "")
+                    gm_html += f"<li style='margin-bottom:4px;'>{pct} percent {label}</li>"
+            struct = ai.get("structure", {}) or {}
+            st.markdown(f"""
+                <div class="glass-panel">
+                    <div class="panel-title">🧩 STRUCTURE & GENRE MIX</div>
+                    <div class="stat-card" style="margin-bottom:12px;">
+                        <div class="stat-label">Structure</div>
+                        <div class="stat-val" style="font-size:0.9rem;">{struct.get("summary","No structure data")}</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Genre composition</div>
+                        <ul style="margin-top:6px; padding-left:18px; font-size:0.85rem; color:#cbd5e1;">
+                            {gm_html}
+                        </ul>
+                    </div>
+                </div>
+            """, unsafe_allow_html=True)
+
+        with c_adv2:
+            mix = ai.get("mix_profile", {}) or {}
+            use_case = ai.get("use_case", "Not specified")
+            emotion_tags = ai.get("emotion_tags", [])
+            persona = ai.get("persona", "")
+            emo_html = " ".join([f"<span class='pill' style='font-size:0.7rem'>{e}</span>" for e in emotion_tags])
+            st.markdown(f"""
+                <div class="glass-panel">
+                    <div class="panel-title">🎚 MIX PROFILE & EMOTION</div>
+                    <div class="stat-card" style="margin-bottom:10px;">
+                        <div class="stat-label">Use case</div>
+                        <div class="stat-val" style="font-size:0.95rem;">{use_case}</div>
+                    </div>
+                    <div class="stat-card" style="margin-bottom:10px;">
+                        <div class="stat-label">Mix profile</div>
+                        <div style="font-size:0.85rem; color:#cbd5e1;">
+                            <b>EQ</b>: {mix.get("eq","-")}<br>
+                            <b>Compression</b>: {mix.get("compression","-")}<br>
+                            <b>Reverb</b>: {mix.get("reverb","-")}<br>
+                            <b>Stereo width</b>: {mix.get("stereo_width","-")}<br>
+                            <b>Dynamics</b>: {mix.get("dynamics","-")}<br>
+                            <b>Loudness</b>: {mix.get("loudness","-")}
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Emotion & persona</div>
+                        <div style="margin-bottom:6px;">{emo_html}</div>
+                        <div style="font-size:0.85rem; color:#cbd5e1;">{persona}</div>
+                    </div>
+                </div>
+            """, unsafe_allow_html=True)
+
         # DAW VISUALIZER
         st.markdown('<div class="panel-title" style="margin-left:5px">📈 STRUCTURAL DYNAMICS</div>', unsafe_allow_html=True)
         
@@ -464,12 +659,31 @@ def main():
 
         st.markdown("<br>", unsafe_allow_html=True)
 
+        # Suno prompts: show the three variants if present
+        prompts = ai.get("suno_prompts", {}) or {}
+        safe_p = prompts.get("safe", ai.get("suno_prompt", "..."))
+        creative_p = prompts.get("creative", "")
+        extreme_p = prompts.get("extreme", "")
+
         c3, c4 = st.columns([1.5, 1])
         with c3:
-            st.markdown(
-                f'<div class="glass-panel"><div class="panel-title">🎹 SUNO PROMPT</div><div class="code-block">{ai.get("suno_prompt","...")}</div></div>',
-                unsafe_allow_html=True
-            )
+            tabs = st.tabs(["Safe", "Creative", "Extreme"])
+            with tabs[0]:
+                st.markdown(
+                    f'<div class="glass-panel"><div class="panel-title">🎹 SUNO PROMPT - SAFE</div><div class="code-block">{safe_p}</div></div>',
+                    unsafe_allow_html=True
+                )
+            with tabs[1]:
+                st.markdown(
+                    f'<div class="glass-panel"><div class="panel-title">🎹 SUNO PROMPT - CREATIVE</div><div class="code-block">{creative_p or "No creative variant generated"}</div></div>',
+                    unsafe_allow_html=True
+                )
+            with tabs[2]:
+                st.markdown(
+                    f'<div class="glass-panel"><div class="panel-title">🎹 SUNO PROMPT - EXTREME</div><div class="code-block">{extreme_p or "No extreme variant generated"}</div></div>',
+                    unsafe_allow_html=True
+                )
+
         with c4:
             tips = "".join([f"<li style='margin-bottom:8px; color:#94a3b8'>{t}</li>" for t in ai.get("tips",[])])
             st.markdown(
@@ -493,6 +707,8 @@ def main():
 
         if st.button("RESET"):
             st.session_state.data = None
+            st.session_state.ai = None
+            st.session_state.lyrics = ""
             st.rerun()
 
 if __name__ == "__main__":
