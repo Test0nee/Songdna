@@ -13,7 +13,6 @@ import librosa
 import plotly.graph_objects as go
 from PIL import Image
 from io import BytesIO
-import textwrap  # <--- NEW IMPORT TO FIX HTML RENDERING
 
 # --- SPOTIFY AUTH ---
 SPOTIFY_CLIENT_ID = st.secrets.get("SPOTIFY_CLIENT_ID")
@@ -40,13 +39,14 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# --- UI CSS ---
+# --- UI CSS (DEFAULT THEME) ---
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=JetBrains+Mono:wght@400;700&display=swap');
     
     .stApp {
         background-color: #050505;
+        /* Default fallback gradient */
         background-image: radial-gradient(circle at 50% 0%, #1e1b4b 0%, #020617 60%);
         font-family: 'Inter', sans-serif;
         color: #fff;
@@ -130,19 +130,6 @@ st.markdown("""
     .brand-title { font-size: 2.6rem; font-weight: 900; letter-spacing: 0.24em; text-transform: uppercase; margin: 0; text-shadow: 0 0 35px rgba(59,130,246,0.5); }
     .brand-subtitle { font-size: 0.78rem; letter-spacing: 0.32em; text-transform: uppercase; color: #6b7280; margin-top: 4px; }
     .top-action { text-align: center; margin: 10px 0 24px 0; }
-    
-    /* REMIX STATION */
-    .remix-box {
-        background: linear-gradient(90deg, rgba(124, 58, 237, 0.1), rgba(59, 130, 246, 0.1));
-        border: 1px solid rgba(139, 92, 246, 0.3);
-        border-radius: 16px; padding: 20px; margin-bottom: 20px;
-    }
-    
-    /* GENRE DNA BARS */
-    .dna-bar-row { margin-bottom: 12px; }
-    .dna-labels { display: flex; justify-content: space-between; font-size: 0.75rem; color: #cbd5e1; margin-bottom: 4px; }
-    .dna-track { width: 100%; height: 6px; background: rgba(255,255,255,0.1); border-radius: 10px; overflow: hidden; }
-    .dna-fill { height: 100%; border-radius: 10px; }
     </style>
 """, unsafe_allow_html=True)
 
@@ -181,17 +168,22 @@ async def fetch_artist_image(artist):
     return "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=1200"
 
 def extract_dominant_color(image_url):
+    """
+    Downloads the image and finds the average color.
+    Returns an RGB tuple (r, g, b).
+    """
     try:
-        if not image_url: return (30, 27, 75)
+        if not image_url: return (30, 27, 75) # Default Dark Blue
         response = requests.get(image_url, timeout=5)
         img = Image.open(BytesIO(response.content)).convert('RGB')
+        # Resize to 1x1 pixel to get average
         img = img.resize((1, 1))
         color = img.getpixel((0, 0))
         return color
     except:
-        return (56, 189, 248)
+        return (56, 189, 248) # Default Cyan
 
-# --- 5. AUDIO ENGINE ---
+# --- 5. AUDIO ENGINE (FIXED) ---
 def safe_load_audio(file_path):
     errors = []
     try:
@@ -215,6 +207,7 @@ def extract_audio_features(file_path):
     if error: return {"success": False, "error": error}
 
     duration = librosa.get_duration(y=y, sr=sr)
+    
     try:
         tempo, _ = librosa.beat.beat_track(y=y, sr=sr)
         if np.ndim(tempo) > 0: tempo = tempo[0]
@@ -234,7 +227,7 @@ def extract_audio_features(file_path):
     
     try:
         onset_env = librosa.onset.onset_strength(y=y, sr=sr)
-        peaks = librosa.util.peak_pick(onset_env, pre_max=20, post_max=20, pre_avg=20, post_avg=20, delta=0.5, wait=100)
+        peaks = librosa.util.peak_pick(onset_env, pre_max=3, post_max=3, pre_avg=3, post_avg=5, delta=0.5, wait=10)
         section_times = librosa.frames_to_time(peaks, sr=sr)
     except: section_times = []
     
@@ -266,37 +259,13 @@ async def identify_song(file_path):
     except: pass
     return {"found": False}
 
-# --- AI BRAIN (GENRE DNA + INTENT) ---
-def analyze_gemini(data, intent="Original Style (Analysis)"):
+def analyze_gemini(data):
     if not api_key: return None
     model = genai.GenerativeModel("gemini-2.5-flash")
-    
-    seg_str = ", ".join([f"Sec {i+1}: {s['end']-s['start']}s (Energy: {s['energy']})" for i,s in enumerate(data.get('segments',[]))])
-    
     prompt = f"""
-    Act as a Music Producer.
-    SOURCE AUDIO DNA: {data.get('title','Unknown')} by {data.get('artist','Unknown')}.
-    BPM: {data.get('bpm')} | Key: {data.get('key')} | Energy: {data.get('energy')}.
-    STRUCTURE SEGMENTS: {seg_str}.
-    USER INTENT: "{intent}".
-    
-    TASK:
-    1. Genre Breakdown (%).
-    2. Map structure.
-    3. Create Suno Prompt.
-    
-    OUTPUT JSON:
-    {{
-        "mood": "Modified Mood",
-        "genre_breakdown": {{"Main Genre": 50, "Sub Genre": 30, "Influence": 20}},
-        "structure_map": [
-            {{"label": "Intro", "start": 0, "color": "#a855f7"}}, 
-            {{"label": "Verse", "start": 15, "color": "#3b82f6"}}
-        ],
-        "vocal_type": "Vocal Style",
-        "suno_prompt": "Prompt...",
-        "tips": ["Tip 1", "Tip 2"]
-    }}
+    Analyze song: {data.get('title','Unknown')} by {data.get('artist','Unknown')}.
+    Tech: {data.get('bpm')} BPM, Key {data.get('key')}, {data.get('energy')} Energy.
+    Output JSON: {{ "mood": "...", "genre": "...", "instruments": ["..."], "vocal_type": "...", "vocal_style": "...", "suno_prompt": "...", "tips": ["..."] }}
     """
     try: return json.loads(model.generate_content(prompt).text.replace("```json","").replace("```",""))
     except: return None
@@ -333,11 +302,12 @@ def main():
                 full_data = {**stats, **(meta if meta['found'] else {"title":"Unknown","artist":"Deep Scan","img":None,"genre":"Unknown"})}
                 full_data['artist_bg'] = run_async(fetch_artist_image(full_data['artist']))
                 
+                # Extract Color
                 img_url = full_data.get('img') or full_data.get('artist_bg')
                 full_data['color_rgb'] = extract_dominant_color(img_url)
 
                 st.session_state.data = full_data
-                st.session_state.ai = analyze_gemini(full_data) 
+                st.session_state.ai = analyze_gemini(full_data)
                 os.remove(tmp_path)
                 st.rerun()
 
@@ -345,19 +315,33 @@ def main():
         d = st.session_state.data
         ai = st.session_state.ai or {}
         
+        # --- DYNAMIC BACKGROUND INJECTION ---
         rgb = d.get('color_rgb', (30, 27, 75))
-        st.markdown(f"""<style>.stApp {{ background-image: radial-gradient(circle at 50% 0%, rgba({rgb[0]}, {rgb[1]}, {rgb[2]}, 0.35) 0%, #050505 70%) !important; }}</style>""", unsafe_allow_html=True)
+        st.markdown(f"""
+            <style>
+            .stApp {{
+                background-image: radial-gradient(
+                    circle at 50% 0%, 
+                    rgba({rgb[0]}, {rgb[1]}, {rgb[2]}, 0.35) 0%, 
+                    #050505 70%
+                ) !important;
+            }}
+            </style>
+        """, unsafe_allow_html=True)
 
+        # --- NEW HERO BANNER ---
         img_url = d.get('img') or d.get('artist_bg') or "https://images.unsplash.com/photo-1470225620780-dba8ba36b745"
         
-        st.markdown(textwrap.dedent(f"""
+        st.markdown(f"""
             <div class="hero-container">
                 <div class="hero-bg-blur" style="background-image: url('{img_url}');"></div>
                 <div class="hero-overlay-gradient"></div>
                 <div class="hero-content-flex">
                     <img src="{img_url}" class="album-cover-square">
                     <div class="hero-text-col">
-                        <div class="verified-pill"><span style="color:#4ade80;">●</span> {d.get('source', 'AI Analysis').upper()}</div>
+                        <div class="verified-pill">
+                            <span style="color:#4ade80;">●</span> {d.get('source', 'AI Analysis').upper()}
+                        </div>
                         <h1 class="hero-title">{d['artist']}</h1>
                         <h2 class="hero-subtitle">{d['title']}</h2>
                         <div class="meta-row">
@@ -368,50 +352,34 @@ def main():
                     </div>
                 </div>
             </div>
-        """), unsafe_allow_html=True)
+        """, unsafe_allow_html=True)
 
         c1, c2 = st.columns(2)
         with c1:
-            # --- GENRE DNA VISUALIZATION (DEDENT FIX) ---
-            breakdown_html = ""
-            colors = ["#38bdf8", "#818cf8", "#c084fc", "#f472b6"]
-            if 'genre_breakdown' in ai:
-                for idx, (genre, pct) in enumerate(ai['genre_breakdown'].items()):
-                    color = colors[idx % len(colors)]
-                    breakdown_html += f"""
-                    <div class="dna-bar-row">
-                        <div class="dna-labels"><span>{genre}</span><span>{pct}%</span></div>
-                        <div class="dna-track"><div class="dna-fill" style="width:{pct}%; background:{color};"></div></div>
-                    </div>
-                    """
-            
-            st.markdown(textwrap.dedent(f"""
+            st.markdown(f"""
                 <div class="glass-panel">
-                    <div class="panel-title">🧬 GENRE DNA</div>
-                    <div style="margin-bottom:15px;">{breakdown_html}</div>
+                    <div class="panel-title">⚡ SONIC PROFILE</div>
                     <div class="stat-grid">
                         <div class="stat-card"><div class="stat-label">MOOD</div><div class="stat-val">{ai.get('mood','-')}</div></div>
-                        <div class="stat-card"><div class="stat-label">VOCAL TYPE</div><div class="stat-val">{ai.get('vocal_type','-')}</div></div>
+                        <div class="stat-card"><div class="stat-label">ENERGY</div><div class="stat-val">{d['energy']}</div></div>
+                    </div>
+                    <div style="margin-top:15px">{' '.join([f'<span class="pill" style="font-size:0.7rem">{i}</span>' for i in ai.get('instruments',[])])}</div>
+                </div>
+            """, unsafe_allow_html=True)
+        with c2:
+            st.markdown(f"""
+                <div class="glass-panel">
+                    <div class="panel-title">🎙 VOCAL PROFILE</div>
+                    <div class="stat-grid">
+                        <div class="stat-card"><div class="stat-label">TYPE</div><div class="stat-val">{ai.get('vocal_type','-')}</div></div>
+                        <div class="stat-card"><div class="stat-label">STYLE</div><div class="stat-val">{ai.get('vocal_style','-')}</div></div>
                     </div>
                 </div>
-            """), unsafe_allow_html=True)
-            
-        with c2:
-            st.markdown('<div class="glass-panel"><div class="panel-title">📏 STRUCTURE MAP</div>', unsafe_allow_html=True)
-            structure_map = ai.get('structure_map', [])
-            total_dur = d.get('segments', [{}])[-1].get('end', 180)
-            
-            timeline_html = '<div style="display:flex; height:40px; width:100%; border-radius:8px; overflow:hidden; margin-top:20px;">'
-            for i, sec in enumerate(structure_map):
-                next_start = structure_map[i+1]['start'] if i+1 < len(structure_map) else total_dur
-                duration = next_start - sec['start']
-                width_pct = (duration / total_dur) * 100
-                timeline_html += f'<div style="width:{width_pct}%; background:{sec.get("color","#555")}; display:flex; align-items:center; justify-content:center; color:white; font-size:10px; border-right:1px solid rgba(0,0,0,0.5);">{sec["label"]}</div>'
-            timeline_html += '</div>'
-            st.markdown(timeline_html, unsafe_allow_html=True)
-            st.markdown("</div>", unsafe_allow_html=True)
+            """, unsafe_allow_html=True)
 
+        # DAW VISUALIZER
         st.markdown('<div class="panel-title" style="margin-left:5px">📈 STRUCTURAL DYNAMICS</div>', unsafe_allow_html=True)
+        
         y = np.array(d['waveform'])
         x = np.linspace(0, 100, len(y))
         
@@ -419,10 +387,11 @@ def main():
         fig.add_trace(go.Scatter(x=x, y=y, fill='tozeroy', line=dict(color='#22d3ee', width=1), name='Energy'))
         fig.add_trace(go.Scatter(x=x, y=-y, fill='tozeroy', line=dict(color='#818cf8', width=1), name='Stereo'))
         
-        for sec in structure_map:
-            start_x = (sec['start'] / total_dur) * 100
-            fig.add_vline(x=start_x, line_width=1, line_dash="solid", line_color="rgba(255,255,255,0.2)")
-            fig.add_annotation(x=start_x + 1, y=0.8, text=sec['label'], showarrow=False, xanchor="left", font=dict(color=sec.get('color', 'white'), size=10))
+        for i, sec in enumerate(d['sections']):
+            sec_x = (sec / (len(y)*512/22050)) * 100 
+            if sec_x > 100: break
+            fig.add_vline(x=sec_x, line_width=1, line_dash="dot", line_color="rgba(255,255,255,0.3)")
+            fig.add_annotation(x=sec_x, y=0.8, text=f"SEC {i+1}", showarrow=False, font=dict(color="#ec4899", size=10))
 
         fig.update_layout(
             height=200, margin=dict(l=0,r=0,t=20,b=0),
@@ -437,21 +406,6 @@ def main():
         st.markdown('</div>', unsafe_allow_html=True)
 
         st.markdown("<br>", unsafe_allow_html=True)
-
-        st.markdown('<div class="panel-title">🎛️ STYLE REMIXER</div>', unsafe_allow_html=True)
-        st.markdown('<div class="remix-box">', unsafe_allow_html=True)
-        rc1, rc2 = st.columns([1, 2])
-        with rc1:
-            intent_preset = st.selectbox("Choose Vibe Modifier", ["Original Analysis", "More Energetic", "Darker / Moody", "Cinematic", "80s Retro", "Acoustic", "Lofi", "Heavy"])
-        with rc2:
-            custom_intent = st.text_input("Or type custom intent...", placeholder="e.g. 'Cyberpunk chase scene'")
-        final_intent = custom_intent if custom_intent else intent_preset
-        
-        if st.button(f"✨ REMIX PROMPT: {final_intent}", use_container_width=True):
-            with st.spinner(f"Morphing audio DNA..."):
-                st.session_state.ai = analyze_gemini(d, intent=final_intent)
-                st.rerun()
-        st.markdown('</div>', unsafe_allow_html=True)
 
         c3, c4 = st.columns([1.5, 1])
         with c3:
