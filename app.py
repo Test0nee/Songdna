@@ -136,6 +136,12 @@ st.markdown("""
         border: 1px solid rgba(139, 92, 246, 0.3);
         border-radius: 16px; padding: 20px; margin-bottom: 20px;
     }
+    
+    /* GENRE DNA BARS */
+    .dna-bar-row { margin-bottom: 12px; }
+    .dna-labels { display: flex; justify-content: space-between; font-size: 0.75rem; color: #cbd5e1; margin-bottom: 4px; }
+    .dna-track { width: 100%; height: 6px; background: rgba(255,255,255,0.1); border-radius: 10px; overflow: hidden; }
+    .dna-fill { height: 100%; border-radius: 10px; }
     </style>
 """, unsafe_allow_html=True)
 
@@ -184,7 +190,7 @@ def extract_dominant_color(image_url):
     except:
         return (56, 189, 248)
 
-# --- 5. AUDIO ENGINE (ADVANCED STRUCTURE DETECTION) ---
+# --- 5. AUDIO ENGINE ---
 def safe_load_audio(file_path):
     errors = []
     try:
@@ -225,46 +231,23 @@ def extract_audio_features(file_path):
     viz_rms = librosa.feature.rms(y=y, hop_length=hop)[0]
     viz_rms = viz_rms / (np.max(viz_rms) + 1e-9) 
     
-    # --- STRUCTURE SEGMENTATION ---
-    segments = []
     try:
-        # Detect major changes in energy/timbre
         onset_env = librosa.onset.onset_strength(y=y, sr=sr)
-        # Using specific params to find major section changes (not just beats)
-        peaks = librosa.util.peak_pick(onset_env, pre_max=20, post_max=20, pre_avg=20, post_avg=20, delta=0.5, wait=100)
-        times = librosa.frames_to_time(peaks, sr=sr)
-        
-        # Calculate energy for each segment to help label it
-        start_t = 0
-        for t in times:
-            if t - start_t > 10: # Minimum section length 10s
-                # Extract segment audio
-                start_sample = int(start_t * sr)
-                end_sample = int(t * sr)
-                seg_rms = np.mean(librosa.feature.rms(y=y[start_sample:end_sample])[0])
-                
-                segments.append({
-                    "start": round(start_t, 1),
-                    "end": round(t, 1),
-                    "energy": round(float(seg_rms), 3)
-                })
-                start_t = t
-        
-        # Append final segment
-        segments.append({
-            "start": round(start_t, 1),
-            "end": round(duration, 1),
-            "energy": round(float(np.mean(librosa.feature.rms(y=y[int(start_t*sr):])[0])), 3)
-        })
-        
-    except: 
-        segments = [{"start": 0, "end": duration, "energy": 0}]
+        peaks = librosa.util.peak_pick(onset_env, pre_max=3, post_max=3, pre_avg=3, post_avg=5, delta=0.5, wait=10)
+        section_times = librosa.frames_to_time(peaks, sr=sr)
+    except: section_times = []
+    
+    filtered_sections = []
+    last = 0
+    for t in section_times:
+        if t - last > 15:
+            filtered_sections.append(t)
+            last = t
 
     return {
         "success": True, "bpm": bpm, "key": key, "energy": energy,
         "duration": f"{int(duration//60)}:{int(duration%60):02d}",
-        "waveform": viz_rms.tolist(), 
-        "segments": segments # Rich metadata for AI to label
+        "waveform": viz_rms.tolist(), "sections": filtered_sections
     }
 
 async def identify_song(file_path):
@@ -282,12 +265,12 @@ async def identify_song(file_path):
     except: pass
     return {"found": False}
 
-# --- AI BRAIN (WITH STRUCTURE & INTENT) ---
+# --- AI BRAIN (GENRE DNA + INTENT) ---
 def analyze_gemini(data, intent="Original Style (Analysis)"):
     if not api_key: return None
     model = genai.GenerativeModel("gemini-2.5-flash")
     
-    # Create a string representation of the segments for the AI
+    # Structure segments for AI context
     seg_str = ", ".join([f"Sec {i+1}: {s['end']-s['start']}s (Energy: {s['energy']})" for i,s in enumerate(data.get('segments',[]))])
     
     prompt = f"""
@@ -300,22 +283,23 @@ def analyze_gemini(data, intent="Original Style (Analysis)"):
     
     USER INTENT (MODIFIER): "{intent}"
     
-    TASK 1: INFER STRUCTURE
-    Look at the raw segments. Low energy usually means Intro/Verse/Bridge. High energy means Chorus/Drop.
-    Map the raw segments to song sections (Intro, Verse, Chorus, etc).
+    TASK 1: GENRE INFLUENCE BREAKDOWN
+    Deconstruct the style into percentages (must sum to 100%).
+    Example: 40% Electro Pop, 30% Synthwave, 30% Funk.
     
-    TASK 2: CREATE PROMPT
-    Create a Suno v3 Prompt based on Source + Intent.
+    TASK 2: INFER STRUCTURE
+    Map raw segments to song sections (Intro, Verse, Chorus, etc).
+    
+    TASK 3: CREATE PROMPT
+    Create a Suno v3 Prompt based on the Genre Breakdown + Intent.
     
     OUTPUT JSON:
     {{
         "mood": "Modified Mood",
-        "genre": "Modified Genre",
-        "instruments": ["Inst1", "Inst2"],
+        "genre_breakdown": {{"Main Genre": 50, "Secondary": 30, "Influence": 20}},
         "structure_map": [
             {{"label": "Intro", "start": 0, "color": "#a855f7"}}, 
-            {{"label": "Verse", "start": 15, "color": "#3b82f6"}},
-            {{"label": "Chorus", "start": 45, "color": "#ec4899"}}
+            {{"label": "Verse", "start": 15, "color": "#3b82f6"}}
         ],
         "vocal_type": "Vocal Style",
         "suno_prompt": "The final prompt ready for Suno (include structure tags)",
@@ -399,9 +383,9 @@ def main():
                         <h1 class="hero-title">{d['artist']}</h1>
                         <h2 class="hero-subtitle">{d['title']}</h2>
                         <div class="meta-row">
-                            <div class="meta-tag">🎵 {ai.get('genre', 'Unknown')}</div>
                             <div class="meta-tag">⏱ {d['bpm']} BPM</div>
                             <div class="meta-tag">🎹 {d['key']}</div>
+                            <div class="meta-tag">⚡ {d['energy']} Energy</div>
                         </div>
                     </div>
                 </div>
@@ -410,30 +394,56 @@ def main():
 
         c1, c2 = st.columns(2)
         with c1:
+            # --- GENRE DNA VISUALIZATION ---
+            breakdown_html = ""
+            colors = ["#38bdf8", "#818cf8", "#c084fc", "#f472b6"] # Gradient colors
+            if 'genre_breakdown' in ai:
+                for idx, (genre, pct) in enumerate(ai['genre_breakdown'].items()):
+                    color = colors[idx % len(colors)]
+                    breakdown_html += f"""
+                    <div class="dna-bar-row">
+                        <div class="dna-labels"><span>{genre}</span><span>{pct}%</span></div>
+                        <div class="dna-track">
+                            <div class="dna-fill" style="width:{pct}%; background:{color};"></div>
+                        </div>
+                    </div>
+                    """
+            
             st.markdown(f"""
                 <div class="glass-panel">
-                    <div class="panel-title">⚡ SONIC PROFILE</div>
+                    <div class="panel-title">🧬 GENRE DNA</div>
+                    <div style="margin-bottom:15px;">{breakdown_html}</div>
                     <div class="stat-grid">
                         <div class="stat-card"><div class="stat-label">MOOD</div><div class="stat-val">{ai.get('mood','-')}</div></div>
-                        <div class="stat-card"><div class="stat-label">ENERGY</div><div class="stat-val">{d['energy']}</div></div>
+                        <div class="stat-card"><div class="stat-label">VOCAL TYPE</div><div class="stat-val">{ai.get('vocal_type','-')}</div></div>
                     </div>
-                    <div style="margin-top:15px">{' '.join([f'<span class="pill" style="font-size:0.7rem">{i}</span>' for i in ai.get('instruments',[])])}</div>
                 </div>
             """, unsafe_allow_html=True)
+            
         with c2:
-            st.markdown(f"""
-                <div class="glass-panel">
-                    <div class="panel-title">🎙 VOCAL PROFILE</div>
-                    <div class="stat-grid">
-                        <div class="stat-card"><div class="stat-label">TYPE</div><div class="stat-val">{ai.get('vocal_type','-')}</div></div>
-                        <div class="stat-card"><div class="stat-label">STYLE</div><div class="stat-val">{ai.get('vocal_style','-')}</div></div>
-                    </div>
-                </div>
-            """, unsafe_allow_html=True)
+            # --- STRUCTURE MAP ---
+            st.markdown('<div class="glass-panel">', unsafe_allow_html=True)
+            st.markdown('<div class="panel-title">📏 STRUCTURE MAP</div>', unsafe_allow_html=True)
+            
+            structure_map = ai.get('structure_map', [])
+            total_dur = d.get('segments', [{}])[-1].get('end', 180)
+            
+            # Simple timeline visual
+            timeline_html = '<div style="display:flex; height:40px; width:100%; border-radius:8px; overflow:hidden; margin-top:20px;">'
+            for i, sec in enumerate(structure_map):
+                # Calculate width based on next section start
+                next_start = structure_map[i+1]['start'] if i+1 < len(structure_map) else total_dur
+                duration = next_start - sec['start']
+                width_pct = (duration / total_dur) * 100
+                timeline_html += f'<div style="width:{width_pct}%; background:{sec.get("color","#555")}; display:flex; align-items:center; justify-content:center; color:white; font-size:10px; border-right:1px solid rgba(0,0,0,0.5);">{sec["label"]}</div>'
+            timeline_html += '</div>'
+            
+            st.markdown(timeline_html, unsafe_allow_html=True)
+            st.markdown("<div style='margin-top:15px; color:#94a3b8; font-size:0.8rem;'>AI estimated arrangement based on energy shifts.</div>", unsafe_allow_html=True)
+            st.markdown('</div>', unsafe_allow_html=True)
 
-        # --- ADVANCED STRUCTURAL VISUALIZER ---
-        st.markdown('<div class="panel-title" style="margin-left:5px">📈 STRUCTURAL ANALYSIS</div>', unsafe_allow_html=True)
-        
+        # --- ADVANCED VISUALIZER ---
+        st.markdown('<div class="panel-title" style="margin-left:5px">📈 STRUCTURAL DYNAMICS</div>', unsafe_allow_html=True)
         y = np.array(d['waveform'])
         x = np.linspace(0, 100, len(y))
         
@@ -441,29 +451,11 @@ def main():
         fig.add_trace(go.Scatter(x=x, y=y, fill='tozeroy', line=dict(color='#22d3ee', width=1), name='Energy'))
         fig.add_trace(go.Scatter(x=x, y=-y, fill='tozeroy', line=dict(color='#818cf8', width=1), name='Stereo'))
         
-        # DRAW LABELED SECTIONS (From AI Inference)
-        structure_map = ai.get('structure_map', [])
-        total_dur = d.get('segments', [{}])[-1].get('end', 180) # Estimated total duration
-        
+        # Add structure markers from AI
         for sec in structure_map:
-            # Convert start time to % X-axis
             start_x = (sec['start'] / total_dur) * 100
-            
-            # Draw Region Line
             fig.add_vline(x=start_x, line_width=1, line_dash="solid", line_color="rgba(255,255,255,0.2)")
-            
-            # Draw Label Tag
-            fig.add_annotation(
-                x=start_x + 2, y=0.9, 
-                text=sec['label'], 
-                showarrow=False, 
-                xanchor="left",
-                bgcolor=sec.get('color', '#333'),
-                bordercolor="#fff",
-                borderwidth=1,
-                borderpad=4,
-                font=dict(color="white", size=10)
-            )
+            fig.add_annotation(x=start_x + 1, y=0.8, text=sec['label'], showarrow=False, xanchor="left", font=dict(color=sec.get('color', 'white'), size=10))
 
         fig.update_layout(
             height=200, margin=dict(l=0,r=0,t=20,b=0),
