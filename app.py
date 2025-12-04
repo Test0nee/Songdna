@@ -10,6 +10,22 @@ import pandas as pd
 import numpy as np
 import librosa
 
+# --- SPOTIFY AUTH ---
+SPOTIFY_CLIENT_ID = st.secrets.get("SPOTIFY_CLIENT_ID")
+SPOTIFY_CLIENT_SECRET = st.secrets.get("SPOTIFY_CLIENT_SECRET")
+
+def get_spotify_token():
+    if not SPOTIFY_CLIENT_ID or not SPOTIFY_CLIENT_SECRET:
+        return None
+    url = "https://accounts.spotify.com/api/token"
+    data = {"grant_type": "client_credentials"}
+    try:
+        r = requests.post(url, data=data, auth=(SPOTIFY_CLIENT_ID, SPOTIFY_CLIENT_SECRET))
+        return r.json().get("access_token")
+    except:
+        return None
+
+
 # --- 1. CONFIGURATION ---
 st.set_page_config(
     page_title="SunoSonic Studio",
@@ -385,25 +401,46 @@ def run_async(coroutine):
     return loop.run_until_complete(coroutine)
 
 
+# --- UPDATED: FETCH SPOTIFY ARTIST IMAGE ---
 async def fetch_artist_image(artist):
     """
-    Get a wide artist image for the hero background.
-    We use Deezer's artist search as a lightweight, no-auth way to get something
-    visually similar to Spotify / Apple hero banners.
+    Get a wide artist banner image from Spotify.
+    Fallback to Deezer or Unsplash.
     """
     if not artist:
         return "https://images.unsplash.com/photo-1514525253440-b393452e8d26?w=1600"
+
     clean_artist = artist.split(',')[0].split('&')[0].split('feat')[0].strip()
+    token = get_spotify_token()
+
+    # SPOTIFY FIRST
+    if token:
+        try:
+            headers = {"Authorization": f"Bearer {token}"}
+            url = f"https://api.spotify.com/v1/search?q={clean_artist}&type=artist&limit=1"
+            r = requests.get(url, headers=headers, timeout=5)
+            data = r.json()
+            items = data.get("artists", {}).get("items", [])
+            if items:
+                images = items[0].get("images", [])
+                if images:
+                    return images[0]["url"]  # WIDE banner
+        except:
+            pass
+
+    # FALLBACK: DEEZER (less square than album covers)
     try:
         url = f"https://api.deezer.com/search/artist?q={clean_artist}"
         r = requests.get(url, timeout=5)
         data = r.json()
         if 'data' in data and data['data']:
-            # Deezer artist picture is already more banner-like than a square cover
             return data['data'][0]['picture_xl']
-    except Exception:
-        return "https://images.unsplash.com/photo-1514525253440-b393452e8d26?w=1600"
+    except:
+        pass
+
+    # FINAL FALLBACK
     return "https://images.unsplash.com/photo-1514525253440-b393452e8d26?w=1600"
+
 
 
 # --- LIBROSA AUDIO ANALYSIS ENGINE ---
@@ -640,9 +677,7 @@ def main():
     if 'song_data' not in st.session_state:
         st.session_state.song_data = None
         st.session_state.analysis = None
-    if 'formatted_lyrics' not in st.session_state:
         st.session_state.formatted_lyrics = ""
-    if 'uploaded_bytes' not in st.session_state:
         st.session_state.uploaded_bytes = None
 
     if not api_key:
@@ -724,10 +759,8 @@ def main():
                         "duration": audio_stats["duration"]
                     }
 
-                if result["source"] == "shazam":
-                    result["artist_bg"] = run_async(fetch_artist_image(result["artist"]))
-                else:
-                    result["artist_bg"] = "https://images.unsplash.com/photo-1478737270239-2f02b77ac6d5?w=1600"
+                # FETCH SPOTIFY IMAGE HERE
+                result["artist_bg"] = run_async(fetch_artist_image(result["artist"]))
 
                 st.session_state.song_data = result
                 st.session_state.analysis = analyze_gemini_json(result)
@@ -779,7 +812,7 @@ def main():
             </div>
         """, unsafe_allow_html=True)
 
-        # AUDIO PLAYER (now wrapped and styled by our CSS)
+        # AUDIO PLAYER
         if st.session_state.get("uploaded_bytes"):
             st.audio(st.session_state.uploaded_bytes, format="audio/mp3")
 
@@ -809,7 +842,7 @@ def main():
                         </div>
                     </div>
                     <div style="margin-top:10px; font-size:0.75rem; color:#9ca3af;">
-                        BPM: {data.get('bpm', '--')} &nbsp;•&nbsp; Key: {data.get('key', '--')} &nbsp;•&nbsp; Timbre: {data.get('timbre', '--')}
+                        BPM: {data.get('bpm', '--')} · Key: {data.get('key', '--')} · Timbre: {data.get('timbre', '--')}
                     </div>
                     <div style="margin-top:15px">{instruments_html}</div>
                 </div>
@@ -826,7 +859,7 @@ def main():
                         </div>
                         <div class="stat-box">
                             <div class="stat-label">STYLE</div>
-                            <div class="stat-value">Modern</div>
+                            <div class="stat-value">{ai.get('vocal_style', 'Modern')}</div>
                         </div>
                     </div>
                     <div style="margin-top:15px; font-size:0.9rem; color:#e5e7eb; font-style:italic;">"{ai.get('vocal_style', '-')}"</div>
