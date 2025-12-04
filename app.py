@@ -21,7 +21,7 @@ SPOTIFY_CLIENT_SECRET = st.secrets.get("SPOTIFY_CLIENT_SECRET")
 def get_spotify_token():
     if not SPOTIFY_CLIENT_ID or not SPOTIFY_CLIENT_SECRET:
         return None
-    url = "https://accounts.spotify.com/api/token" 
+    url = "https://accounts.spotify.com/api/token" # Correct Spotify Token URL
     headers = {"Content-Type": "application/x-www-form-urlencoded"}
     data = {"grant_type": "client_credentials"}
     try:
@@ -170,7 +170,7 @@ async def fetch_artist_image(artist):
     token = get_spotify_token()
     if token:
         try:
-            url = f"https://api.spotify.com/v1/search?q={clean_artist}&type=artist&limit=1"
+            url = f"https://api.spotify.com/v1/search?q={clean_artist}&type=artist&limit=1" # Corrected Search URL
             r = requests.get(url, headers={"Authorization": f"Bearer {token}"}, timeout=3)
             if r.status_code == 200:
                 items = r.json().get("artists", {}).get("items", [])
@@ -383,9 +383,9 @@ def main():
                         <h1 class="hero-title">{d['artist']}</h1>
                         <h2 class="hero-subtitle">{d['title']}</h2>
                         <div class="meta-row">
+                            <div class="meta-tag">🎵 {ai.get('genre', 'Unknown')}</div>
                             <div class="meta-tag">⏱ {d['bpm']} BPM</div>
                             <div class="meta-tag">🎹 {d['key']}</div>
-                            <div class="meta-tag">⚡ {d['energy']} Energy</div>
                         </div>
                     </div>
                 </div>
@@ -452,6 +452,8 @@ def main():
         fig.add_trace(go.Scatter(x=x, y=-y, fill='tozeroy', line=dict(color='#818cf8', width=1), name='Stereo'))
         
         # Add structure markers from AI
+        structure_map = ai.get('structure_map', [])
+        total_dur = d.get('segments', [{}])[-1].get('end', 180) # Estimated total duration
         for sec in structure_map:
             start_x = (sec['start'] / total_dur) * 100
             fig.add_vline(x=start_x, line_width=1, line_dash="solid", line_color="rgba(255,255,255,0.2)")
