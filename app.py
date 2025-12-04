@@ -39,13 +39,14 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# --- UI CSS ---
+# --- UI CSS (DEFAULT THEME) ---
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=JetBrains+Mono:wght@400;700&display=swap');
     
     .stApp {
-        background-color: #020617;
+        background-color: #050505;
+        /* Default fallback gradient */
         background-image: radial-gradient(circle at 50% 0%, #1e1b4b 0%, #020617 60%);
         font-family: 'Inter', sans-serif;
         color: #fff;
@@ -54,138 +55,81 @@ st.markdown("""
     .block-container { padding-top: 2rem; max-width: 1200px; }
     header, footer, [data-testid="stSidebar"] { display: none !important; }
 
-    /* --- NEW HERO SECTION --- */
+    /* HERO */
     .hero-container {
-        position: relative;
-        border-radius: 24px;
-        overflow: hidden;
-        margin-bottom: 30px;
-        box-shadow: 0 25px 50px -12px rgba(0,0,0,0.7);
-        border: 1px solid rgba(255,255,255,0.1);
-        height: 380px;
-        display: flex;
-        align-items: center;
+        position: relative; border-radius: 24px; overflow: hidden; margin-bottom: 30px;
+        box-shadow: 0 25px 50px -12px rgba(0,0,0,0.7); border: 1px solid rgba(255,255,255,0.1);
+        height: 380px; display: flex; align-items: center;
     }
-    
-    /* Layer 1: The blurred background image */
     .hero-bg-blur {
-        position: absolute;
-        top: 0; left: 0; width: 100%; height: 100%;
-        background-size: cover;
-        background-position: center;
-        filter: blur(40px) saturate(1.5) brightness(0.6);
-        z-index: 0;
-        transform: scale(1.1); /* Prevents white edges from blur */
+        position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+        background-size: cover; background-position: center;
+        filter: blur(40px) saturate(1.5) brightness(0.6); z-index: 0; transform: scale(1.1);
     }
-    
-    /* Layer 2: The gradient overlay to make text readable */
     .hero-overlay-gradient {
-        position: absolute;
-        top: 0; left: 0; width: 100%; height: 100%;
+        position: absolute; top: 0; left: 0; width: 100%; height: 100%;
         background: linear-gradient(90deg, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0.4) 60%, rgba(0,0,0,0.1) 100%);
         z-index: 1;
     }
-    
-    /* Layer 3: The Content */
     .hero-content-flex {
-        position: relative;
-        z-index: 2;
-        display: flex;
-        align-items: center;
-        padding: 40px;
-        width: 100%;
-        gap: 40px;
+        position: relative; z-index: 2; display: flex; align-items: center;
+        padding: 40px; width: 100%; gap: 40px;
     }
-    
-    /* The Square Album Art */
     .album-cover-square {
-        width: 280px;
-        height: 280px;
-        border-radius: 12px;
-        box-shadow: 0 15px 40px rgba(0,0,0,0.6);
-        object-fit: cover;
-        border: 1px solid rgba(255,255,255,0.2);
-        flex-shrink: 0; /* Prevents shrinking */
+        width: 280px; height: 280px; border-radius: 12px;
+        box-shadow: 0 15px 40px rgba(0,0,0,0.6); object-fit: cover;
+        border: 1px solid rgba(255,255,255,0.2); flex-shrink: 0;
     }
-    
-    /* The Text Metadata */
-    .hero-text-col {
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-    }
+    .hero-text-col { display: flex; flex-direction: column; justify-content: center; }
     
     .verified-pill {
         display: inline-flex; align-items: center; gap: 6px;
-        background: rgba(255,255,255,0.15); 
-        border: 1px solid rgba(255,255,255,0.2);
-        padding: 6px 12px; border-radius: 50px;
-        font-size: 0.75rem; font-weight: 700; letter-spacing: 1px;
-        text-transform: uppercase; margin-bottom: 16px;
-        width: fit-content;
-        backdrop-filter: blur(10px);
+        background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.2);
+        padding: 6px 12px; border-radius: 50px; font-size: 0.75rem; font-weight: 700;
+        text-transform: uppercase; margin-bottom: 16px; width: fit-content; backdrop-filter: blur(10px);
     }
-    
     h1.hero-title {
-        font-size: 4.5rem;
-        font-weight: 900;
-        margin: 0;
-        line-height: 1;
-        letter-spacing: -2px;
+        font-size: 4.5rem; font-weight: 900; margin: 0; line-height: 1; letter-spacing: -2px;
         text-shadow: 0 4px 30px rgba(0,0,0,0.5);
     }
-    
     h2.hero-subtitle {
-        font-size: 2rem;
-        color: rgba(255,255,255,0.8);
-        margin: 10px 0 25px 0;
-        font-weight: 500;
-        letter-spacing: -0.5px;
+        font-size: 2rem; color: rgba(255,255,255,0.8); margin: 10px 0 25px 0; font-weight: 500; letter-spacing: -0.5px;
     }
-    
-    .meta-row {
-        display: flex; gap: 10px;
-    }
-    
+    .meta-row { display: flex; gap: 10px; }
     .meta-tag {
-        background: rgba(0,0,0,0.5);
-        border: 1px solid rgba(255,255,255,0.1);
-        padding: 8px 16px; border-radius: 8px;
-        font-size: 0.85rem; color: #e2e8f0;
-        font-weight: 600;
+        background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.1);
+        padding: 8px 16px; border-radius: 8px; font-size: 0.85rem; color: #e2e8f0; font-weight: 600;
     }
 
     /* GLASS PANELS */
     .glass-panel {
-        background: rgba(15, 23, 42, 0.6);
-        border: 1px solid rgba(255, 255, 255, 0.08);
-        border-radius: 20px; padding: 24px;
-        backdrop-filter: blur(12px);
-        margin-bottom: 20px;
+        background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 20px; padding: 24px; backdrop-filter: blur(12px); margin-bottom: 20px;
     }
     .panel-title { 
         font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1.5px; 
         color: #94a3b8; font-weight: 700; margin-bottom: 15px; display: flex; align-items: center; gap: 8px;
     }
 
-    /* VISUALIZER CONTAINER */
+    /* VISUALIZER */
     .viz-container {
-        background: #0b0f19;
-        border: 1px solid #1e293b;
-        border-radius: 16px;
-        padding: 4px;
-        box-shadow: inset 0 0 20px rgba(0,0,0,0.5);
+        background: #0b0f19; border: 1px solid #1e293b; border-radius: 16px;
+        padding: 4px; box-shadow: inset 0 0 20px rgba(0,0,0,0.5);
     }
 
-    /* GRID STATS */
+    /* STATS & LYRICS */
     .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
     .stat-card { background: rgba(255,255,255,0.03); padding: 15px; border-radius: 12px; }
     .stat-label { font-size: 0.7rem; color: #64748b; margin-bottom: 5px; }
     .stat-val { font-size: 1.1rem; font-weight: 600; }
-
-    /* LYRICS */
     .stTextArea textarea { background: #0b0f19 !important; border: 1px solid #1e293b !important; color: #cbd5e1 !important; }
     .code-block { background: #0b0f19; padding: 20px; border-radius: 12px; font-family: 'JetBrains Mono', monospace; color: #a5b4fc; border: 1px solid #1e293b; }
+    
+    /* BRANDING */
+    .brand-wrap { text-align: center; margin-bottom: 24px; }
+    .brand-title { font-size: 2.6rem; font-weight: 900; letter-spacing: 0.24em; text-transform: uppercase; margin: 0; text-shadow: 0 0 35px rgba(59,130,246,0.5); }
+    .brand-subtitle { font-size: 0.78rem; letter-spacing: 0.32em; text-transform: uppercase; color: #6b7280; margin-top: 4px; }
+    .top-action { text-align: center; margin: 10px 0 24px 0; }
     </style>
 """, unsafe_allow_html=True)
 
@@ -224,15 +168,20 @@ async def fetch_artist_image(artist):
     return "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=1200"
 
 def extract_dominant_color(image_url):
-    """Simple color extraction for dynamic gradients"""
+    """
+    Downloads the image and finds the average color.
+    Returns an RGB tuple (r, g, b).
+    """
     try:
-        response = requests.get(image_url)
-        img = Image.open(BytesIO(response.content))
+        if not image_url: return (30, 27, 75) # Default Dark Blue
+        response = requests.get(image_url, timeout=5)
+        img = Image.open(BytesIO(response.content)).convert('RGB')
+        # Resize to 1x1 pixel to get average
         img = img.resize((1, 1))
         color = img.getpixel((0, 0))
-        return f"rgba({color[0]},{color[1]},{color[2]}, 0.8)"
+        return color
     except:
-        return "rgba(56, 189, 248, 0.8)"
+        return (56, 189, 248) # Default Cyan
 
 # --- 5. AUDIO ENGINE (FIXED) ---
 def safe_load_audio(file_path):
@@ -278,7 +227,6 @@ def extract_audio_features(file_path):
     
     try:
         onset_env = librosa.onset.onset_strength(y=y, sr=sr)
-        # UPDATED: Named arguments to fix TypeError
         peaks = librosa.util.peak_pick(onset_env, pre_max=3, post_max=3, pre_avg=3, post_avg=5, delta=0.5, wait=10)
         section_times = librosa.frames_to_time(peaks, sr=sr)
     except: section_times = []
@@ -354,6 +302,10 @@ def main():
                 full_data = {**stats, **(meta if meta['found'] else {"title":"Unknown","artist":"Deep Scan","img":None,"genre":"Unknown"})}
                 full_data['artist_bg'] = run_async(fetch_artist_image(full_data['artist']))
                 
+                # Extract Color
+                img_url = full_data.get('img') or full_data.get('artist_bg')
+                full_data['color_rgb'] = extract_dominant_color(img_url)
+
                 st.session_state.data = full_data
                 st.session_state.ai = analyze_gemini(full_data)
                 os.remove(tmp_path)
@@ -363,6 +315,20 @@ def main():
         d = st.session_state.data
         ai = st.session_state.ai or {}
         
+        # --- DYNAMIC BACKGROUND INJECTION ---
+        rgb = d.get('color_rgb', (30, 27, 75))
+        st.markdown(f"""
+            <style>
+            .stApp {{
+                background-image: radial-gradient(
+                    circle at 50% 0%, 
+                    rgba({rgb[0]}, {rgb[1]}, {rgb[2]}, 0.35) 0%, 
+                    #050505 70%
+                ) !important;
+            }}
+            </style>
+        """, unsafe_allow_html=True)
+
         # --- NEW HERO BANNER ---
         img_url = d.get('img') or d.get('artist_bg') or "https://images.unsplash.com/photo-1470225620780-dba8ba36b745"
         
