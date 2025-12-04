@@ -9,6 +9,8 @@ import json
 import pandas as pd
 import numpy as np
 import librosa
+from PIL import Image
+from io import BytesIO
 
 # --- SPOTIFY AUTH ---
 SPOTIFY_CLIENT_ID = st.secrets.get("SPOTIFY_CLIENT_ID")
@@ -32,12 +34,11 @@ st.set_page_config(
     page_title="SunoSonic Studio",
     page_icon="🎵",
     layout="wide",
-    initial_sidebar_state="collapsed",
+    initial_sidebar_state="collapsed"
 )
 
 # --- 2. ULTRA-MODERN UI (CSS) ---
-st.markdown(
-    """
+st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&family=JetBrains+Mono:wght@400;700&display=swap');
     
@@ -104,7 +105,7 @@ st.markdown(
         margin: 10px 0 24px 0;
     }
 
-    /* HERO SECTION - FULL BACKGROUND (NO SQUARE COVER) */
+    /* HERO SECTION BASE */
     .hero-wrapper {
         position: relative;
         border-radius: 28px;
@@ -115,20 +116,12 @@ st.markdown(
         height: 320px;
         background: radial-gradient(circle at 0% 0%, #1e293b, #020617);
     }
-    .hero-bg { 
-        width: 100%; 
-        height: 100%; 
-        object-fit: cover; 
-        transform: scale(1.1);  /* a bit more zoom to hide square edges */
-        filter: saturate(1.1) brightness(0.85);
-    }
+
     .hero-overlay {
         position: absolute; 
         inset: 0;
         background:
-            linear-gradient(to top, rgba(15,23,42,0.96) 0%, rgba(15,23,42,0.82) 32%, rgba(15,23,42,0.42) 65%, rgba(15,23,42,0.0) 100%),
-            radial-gradient(circle at 0% 0%, rgba(59,130,246,0.25), transparent 55%),
-            radial-gradient(circle at 100% 0%, rgba(236,72,153,0.25), transparent 55%);
+            linear-gradient(to right, rgba(15,23,42,0.9), rgba(15,23,42,0.85));
         display: flex; 
         align-items: flex-end; 
         padding: 26px 32px;
@@ -360,6 +353,7 @@ st.markdown(
         filter: saturate(1.1);
     }
 
+    /* WebKit-specific timeline color tweak (Chrome / Edge) */
     audio::-webkit-media-controls-panel {
         background: #020617;
     }
@@ -368,6 +362,7 @@ st.markdown(
         color: #e5e7eb;
     }
 
+    /* UPLOAD */
     .upload-area { 
         border: 2px dashed #1f2937; 
         border-radius: 20px; 
@@ -375,58 +370,14 @@ st.markdown(
         text-align: center; 
     }
     </style>
-""",
-    unsafe_allow_html=True,
-)
+""", unsafe_allow_html=True)
 
 # --- 3. KNOWLEDGE BASE ---
 SUNO_TAGS = {
-    "Structure": [
-        "[Intro]",
-        "[Verse]",
-        "[Chorus]",
-        "[Pre-Chorus]",
-        "[Bridge]",
-        "[Outro]",
-        "[Drop]",
-        "[Build]",
-        "[Instrumental Break]",
-        "[Hook]",
-        "[Solo]",
-    ],
-    "Mood": [
-        "Uplifting",
-        "Melancholic",
-        "Dark",
-        "Euphoric",
-        "Chill",
-        "Aggressive",
-        "Dreamy",
-        "Nostalgic",
-        "Epic",
-        "Mysterious",
-    ],
-    "Vocals": [
-        "[Male Vocals]",
-        "[Female Vocals]",
-        "[Duet]",
-        "[Choir]",
-        "[Whispered]",
-        "[Belting]",
-        "[Auto-tune]",
-        "[Spoken Word]",
-        "[Rapping]",
-    ],
-    "Production": [
-        "[Reverb]",
-        "[Delay]",
-        "[Lo-fi]",
-        "[Acoustic]",
-        "[Synthesizer]",
-        "[Bass Boosted]",
-        "[Orchestral]",
-        "[Minimal]",
-    ],
+    "Structure": ["[Intro]", "[Verse]", "[Chorus]", "[Pre-Chorus]", "[Bridge]", "[Outro]", "[Drop]", "[Build]", "[Instrumental Break]", "[Hook]", "[Solo]"],
+    "Mood": ["Uplifting", "Melancholic", "Dark", "Euphoric", "Chill", "Aggressive", "Dreamy", "Nostalgic", "Epic", "Mysterious"],
+    "Vocals": ["[Male Vocals]", "[Female Vocals]", "[Duet]", "[Choir]", "[Whispered]", "[Belting]", "[Auto-tune]", "[Spoken Word]", "[Rapping]"],
+    "Production": ["[Reverb]", "[Delay]", "[Lo-fi]", "[Acoustic]", "[Synthesizer]", "[Bass Boosted]", "[Orchestral]", "[Minimal]"]
 }
 
 # --- 4. LOGIC & HELPERS ---
@@ -445,12 +396,14 @@ def run_async(coroutine):
     return loop.run_until_complete(coroutine)
 
 
-# OPTIONAL: Spotify / Deezer artist-bg (kept for future, but no longer critical)
 async def fetch_artist_image(artist):
+    """
+    Get a wide artist banner image from Spotify, fallback Deezer, then Unsplash.
+    """
     if not artist:
         return "https://images.unsplash.com/photo-1514525253440-b393452e8d26?w=1600"
 
-    clean_artist = artist.split(",")[0].split("&")[0].split("feat")[0].strip()
+    clean_artist = artist.split(',')[0].split('&')[0].split('feat')[0].strip()
     token = get_spotify_token()
 
     if token:
@@ -471,16 +424,43 @@ async def fetch_artist_image(artist):
         url = f"https://api.deezer.com/search/artist?q={clean_artist}"
         r = requests.get(url, timeout=5)
         data = r.json()
-        if "data" in data and data["data"]:
-            return data["data"][0]["picture_xl"]
+        if 'data' in data and data['data']:
+            return data['data'][0]['picture_xl']
     except Exception:
         pass
 
     return "https://images.unsplash.com/photo-1514525253440-b393452e8d26?w=1600"
 
 
+def extract_dominant_color(image_url):
+    """
+    Download the cover image and return a simple dominant RGB color (average).
+    """
+    try:
+        if not image_url:
+            return (56, 189, 248)
+        resp = requests.get(image_url, timeout=5)
+        img = Image.open(BytesIO(resp.content)).convert("RGB")
+        img = img.resize((50, 50))
+        pixels = np.array(img).reshape(-1, 3)
+        r, g, b = pixels.mean(axis=0)
+        return int(r), int(g), int(b)
+    except Exception:
+        return (56, 189, 248)
+
+
 # --- LIBROSA AUDIO ANALYSIS ENGINE ---
 def extract_audio_features(file_path):
+    """
+    Examine the raw audio and extract:
+    - Tempo (BPM)
+    - Key
+    - Timbre (brightness)
+    - Energy
+    - Simple vocal presence heuristic
+    - Style hint based on harmonic/percussive balance
+    - Duration (mm:ss)
+    """
     try:
         y, sr = librosa.load(file_path, sr=None)
         duration_sec = librosa.get_duration(y=y, sr=sr)
@@ -493,7 +473,7 @@ def extract_audio_features(file_path):
 
         chroma = librosa.feature.chroma_cqt(y=y, sr=sr)
         chroma_vals = np.sum(chroma, axis=1)
-        pitches = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"]
+        pitches = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']
         key_idx = int(np.argmax(chroma_vals))
         key = pitches[key_idx]
 
@@ -555,7 +535,7 @@ def extract_audio_features(file_path):
             "style_hint": style_hint,
             "vocals": vocals_flag,
             "voice_ratio": round(voice_ratio, 2),
-            "duration": duration_str,
+            "duration": duration_str
         }
     except Exception as e:
         return {"success": False, "error": str(e)}
@@ -565,15 +545,15 @@ async def identify_song(file_path):
     shazam = Shazam()
     try:
         out = await shazam.recognize(file_path)
-        if "track" in out:
-            track = out["track"]
+        if 'track' in out:
+            track = out['track']
             return {
                 "found": True,
                 "source": "shazam",
-                "title": track.get("title"),
-                "artist": track.get("subtitle"),
-                "album_art": track.get("images", {}).get("coverart"),
-                "genre": track.get("genres", {}).get("primary", "Electronic"),
+                "title": track.get('title'),
+                "artist": track.get('subtitle'),
+                "album_art": track.get('images', {}).get('coverart'),
+                "genre": track.get('genres', {}).get('primary', 'Electronic')
             }
         return {"found": False}
     except Exception:
@@ -585,9 +565,9 @@ def analyze_gemini_json(song_data):
         return None
 
     try:
-        model = genai.GenerativeModel("gemini-2.5-flash")
+        model = genai.GenerativeModel('gemini-2.5-flash')
     except Exception:
-        model = genai.GenerativeModel("gemini-1.5-flash")
+        model = genai.GenerativeModel('gemini-1.5-flash')
 
     if song_data.get("source") == "librosa":
         prompt = f"""
@@ -664,7 +644,7 @@ Return ONLY valid JSON in this structure:
             "vocal_type": "Unknown",
             "vocal_style": "",
             "suno_prompt": f"{song_data.get('genre', 'Unknown')} track at {song_data.get('bpm', '')}, {song_data.get('energy', '')} energy.",
-            "tips": [],
+            "tips": []
         }
 
 
@@ -672,10 +652,10 @@ def format_lyrics_with_tags(raw_lyrics, song_analysis):
     if not api_key:
         return "Please set GEMINI_API_KEY in Streamlit secrets."
     try:
-        model = genai.GenerativeModel("gemini-2.5-flash")
+        model = genai.GenerativeModel('gemini-2.5-flash')
     except Exception:
-        model = genai.GenerativeModel("gemini-1.5-flash")
-
+        model = genai.GenerativeModel('gemini-1.5-flash')
+        
     prompt = f"""
 Act as a Suno.ai meta-tagging expert.
 
@@ -700,16 +680,17 @@ LYRICS:
 
 # --- 5. MAIN APPLICATION ---
 def main():
-    if "song_data" not in st.session_state:
+    if 'song_data' not in st.session_state:
         st.session_state.song_data = None
+    if 'analysis' not in st.session_state:
         st.session_state.analysis = None
+    if 'formatted_lyrics' not in st.session_state:
         st.session_state.formatted_lyrics = ""
+    if 'uploaded_bytes' not in st.session_state:
         st.session_state.uploaded_bytes = None
 
     if not api_key:
-        st.warning(
-            "Gemini API key is not configured. Audio analysis will work, but AI prompts and lyric tagging will be limited."
-        )
+        st.warning("Gemini API key is not configured. Audio analysis will work, but AI prompts and lyric tagging will be limited.")
 
     # BRAND HEADER
     st.markdown(
@@ -720,16 +701,16 @@ def main():
             <div class="brand-subtitle">AI AUDIO INTELLIGENCE STUDIO</div>
         </div>
         """,
-        unsafe_allow_html=True,
+        unsafe_allow_html=True
     )
 
     # --- STATE 1: UPLOAD ---
     if not st.session_state.song_data:
         st.markdown(
             '<div class="top-action"><span style="font-size:0.8rem; letter-spacing:0.18em; text-transform:uppercase; color:#9ca3af;">Upload a track to begin analysis</span></div>',
-            unsafe_allow_html=True,
+            unsafe_allow_html=True
         )
-        uploaded_file = st.file_uploader(" ", type=["mp3", "wav", "ogg"])
+        uploaded_file = st.file_uploader(" ", type=['mp3', 'wav', 'ogg'])
 
         if not uploaded_file:
             st.info("👆 Drop an audio file above to begin.")
@@ -766,7 +747,7 @@ def main():
                         "style_hint": audio_stats["style_hint"],
                         "vocals": audio_stats["vocals"],
                         "voice_ratio": audio_stats["voice_ratio"],
-                        "duration": audio_stats["duration"],
+                        "duration": audio_stats["duration"]
                     }
                 else:
                     st.toast("Metadata not found. Engaging deep audio scan...", icon="🧬")
@@ -784,11 +765,16 @@ def main():
                         "style_hint": audio_stats["style_hint"],
                         "vocals": audio_stats["vocals"],
                         "voice_ratio": audio_stats["voice_ratio"],
-                        "duration": audio_stats["duration"],
+                        "duration": audio_stats["duration"]
                     }
 
-                # Optional artist background for later use
+                # Fetch artist image (for future use if needed)
                 result["artist_bg"] = run_async(fetch_artist_image(result["artist"]))
+
+                # Use album art or artist image for hero and extract dominant color
+                hero_img = result.get("album_art") or result.get("artist_bg")
+                accent_r, accent_g, accent_b = extract_dominant_color(hero_img)
+                result["accent_color"] = (accent_r, accent_g, accent_b)
 
                 st.session_state.song_data = result
                 st.session_state.analysis = analyze_gemini_json(result)
@@ -800,6 +786,35 @@ def main():
         data = st.session_state.song_data
         ai = st.session_state.analysis or {}
 
+        # Dynamic colors from album cover
+        accent_r, accent_g, accent_b = data.get("accent_color", (56, 189, 248))
+        accent_rgb = f"{accent_r},{accent_g},{accent_b}"
+
+        st.markdown(
+            f"""
+            <style>
+            .hero-wrapper.dynamic {{
+                background: linear-gradient(
+                    135deg,
+                    rgba({accent_rgb}, 0.65) 0%,
+                    rgba(15,23,42,0.96) 45%,
+                    rgba(0,0,0,1) 100%
+                );
+            }}
+            .hero-play-btn {{
+                background: radial-gradient(circle at 30% 0%, rgba({accent_rgb}, 1), rgba({accent_rgb}, 0.5));
+                box-shadow: 0 18px 35px rgba({accent_rgb}, 0.7);
+            }}
+            .meta-pill {{
+                border-color: rgba({accent_rgb}, 0.6);
+                background: rgba(15,23,42,0.95);
+            }}
+            </style>
+            """,
+            unsafe_allow_html=True,
+        )
+
+        # Top "Analyze new track" action
         cols = st.columns([1, 1, 1])
         with cols[1]:
             if st.button("← ANALYZE NEW TRACK", use_container_width=True):
@@ -809,20 +824,59 @@ def main():
                 st.session_state.uploaded_bytes = None
                 st.rerun()
 
-        # IMPORTANT CHANGE:
-        # Prefer the square cover art and stretch it across the whole hero.
+        # Prefer album cover; fall back to artist image
         hero_bg = (
             data.get("album_art")
             or data.get("artist_bg")
             or "https://images.unsplash.com/photo-1511379938547-c1f69419868d?w=1600"
         )
 
+        # HERO CARD – Spotify-style: blurred background + square cover
         st.markdown(
             f"""
-            <div class="hero-wrapper">
-                <img src="{hero_bg}" class="hero-bg">
+            <style>
+            .hero-bg-blur {{
+                position: absolute;
+                inset: -30px;
+                background-image: url('{hero_bg}');
+                background-size: cover;
+                background-position: center;
+                filter: blur(32px) saturate(1.3) brightness(0.65);
+                transform: scale(1.1);
+            }}
+            .hero-overlay {{
+                position: relative;
+                background: linear-gradient(
+                    90deg,
+                    rgba(15,23,42,0.95) 0%,
+                    rgba(15,23,42,0.85) 40%,
+                    rgba(15,23,42,0.4) 100%
+                );
+            }}
+            .hero-inner {{
+                display: flex;
+                align-items: center;
+                justify-content: flex-start;
+                gap: 32px;
+                width: 100%;
+            }}
+            .hero-cover {{
+                width: 210px;
+                height: 210px;
+                border-radius: 24px;
+                object-fit: cover;
+                box-shadow: 0 22px 45px rgba(0,0,0,0.65);
+                flex-shrink: 0;
+            }}
+            .hero-meta {{
+                max-width: 60%;
+            }}
+            </style>
+            <div class="hero-wrapper dynamic">
+                <div class="hero-bg-blur"></div>
                 <div class="hero-overlay">
                     <div class="hero-inner">
+                        <img src="{hero_bg}" class="hero-cover">
                         <div class="hero-meta">
                             <div class="verified-badge">
                                 <span class="verified-dot"></span>
@@ -848,18 +902,19 @@ def main():
             unsafe_allow_html=True,
         )
 
+        # AUDIO PLAYER
         if st.session_state.get("uploaded_bytes"):
             st.audio(st.session_state.uploaded_bytes, format="audio/mp3")
 
         st.markdown("<br>", unsafe_allow_html=True)
 
+        # ANALYSIS GRID
         col1, col2 = st.columns(2)
         with col1:
-            instruments_html = "".join(
-                [f'<span class="small-tag">{inst}</span>' for inst in ai.get("instruments", [])]
+            instruments_html = ''.join(
+                [f'<span class="small-tag">{inst}</span>' for inst in ai.get('instruments', [])]
             )
-            st.markdown(
-                f"""
+            st.markdown(f"""
                 <div class="glass-panel glow-cyan">
                     <div class="panel-header"><span style="color:#38bdf8">⚡</span> SONIC PROFILE</div>
                     <div class="stat-grid">
@@ -881,13 +936,10 @@ def main():
                     </div>
                     <div style="margin-top:15px">{instruments_html}</div>
                 </div>
-            """,
-                unsafe_allow_html=True,
-            )
+            """, unsafe_allow_html=True)
 
         with col2:
-            st.markdown(
-                f"""
+            st.markdown(f"""
                 <div class="glass-panel glow-pink">
                     <div class="panel-header"><span style="color:#ec4899">🎙</span> VOCAL ARCHITECTURE</div>
                     <div class="stat-grid">
@@ -902,53 +954,47 @@ def main():
                     </div>
                     <div style="margin-top:15px; font-size:0.9rem; color:#e5e7eb; font-style:italic;">"{ai.get('vocal_style', '-')}"</div>
                 </div>
-            """,
-                unsafe_allow_html=True,
-            )
+            """, unsafe_allow_html=True)
 
+        # VISUALIZER
         st.markdown("<br>", unsafe_allow_html=True)
         st.markdown(
             '<div class="glass-panel" style="border-top: 1px solid rgba(129,140,248,0.35);"><div class="panel-header">🎼 STRUCTURAL DYNAMICS & RMS (SIMULATED)</div></div>',
-            unsafe_allow_html=True,
+            unsafe_allow_html=True
         )
-        spikiness = 2.0 if "High" in data.get("energy", "") else 0.5
+        spikiness = 2.0 if "High" in data.get('energy', '') else 0.5
         chart_data = pd.DataFrame(
-            np.random.randn(80, 3) * spikiness, columns=["L", "R", "RMS"]
+            np.random.randn(80, 3) * spikiness,
+            columns=['L', 'R', 'RMS']
         )
         st.area_chart(chart_data, height=120)
 
         st.markdown("<br>", unsafe_allow_html=True)
 
+        # PROMPT & TIPS
         p_col, t_col = st.columns([1.5, 1])
         with p_col:
             st.markdown(
                 f'<div class="glass-panel glow-purple"><div class="panel-header"><span style="color:#818cf8">🎹</span> SUNO AI STYLE PROMPT</div><div class="prompt-container">{ai.get("suno_prompt", "Prompt not available.")}</div></div>',
-                unsafe_allow_html=True,
+                unsafe_allow_html=True
             )
 
         with t_col:
-            tips_list = ai.get("tips", [])
+            tips_list = ai.get('tips', [])
             tips_html = "".join(
-                [
-                    f'<div class="tip-item"><div class="tip-num">{i+1}</div><div>{tip}</div></div>'
-                    for i, tip in enumerate(tips_list)
-                ]
+                [f'<div class="tip-item"><div class="tip-num">{i+1}</div><div>{tip}</div></div>'
+                 for i, tip in enumerate(tips_list)]
             )
             st.markdown(
                 f'<div class="glass-panel"><div class="panel-header">💡 PRO TIPS</div>{tips_html or "No tips generated."}</div>',
-                unsafe_allow_html=True,
+                unsafe_allow_html=True
             )
 
+        # LYRIC STUDIO
         st.markdown("<br>", unsafe_allow_html=True)
-        st.markdown(
-            '<div class="glass-panel glow-purple" style="border: 1px solid #1f2937;">',
-            unsafe_allow_html=True,
-        )
-        st.markdown(
-            '<div class="panel-header">📝 LYRIC STUDIO <span class="small-tag" style="margin-left:10px; color:#a78bfa; border-color:#4c1d95;">AUTO TAGGER</span></div>',
-            unsafe_allow_html=True,
-        )
-
+        st.markdown('<div class="glass-panel glow-purple" style="border: 1px solid #1f2937;">', unsafe_allow_html=True)
+        st.markdown('<div class="panel-header">📝 LYRIC STUDIO <span class="small-tag" style="margin-left:10px; color:#a78bfa; border-color:#4c1d95;">AUTO TAGGER</span></div>', unsafe_allow_html=True)
+        
         l_col1, l_col2 = st.columns(2)
         with l_col1:
             st.caption("Paste raw lyrics here")
@@ -957,9 +1003,9 @@ def main():
                 height=300,
                 placeholder="Type or paste lyrics...",
                 label_visibility="collapsed",
-                key="raw_lyrics_input",
+                key="raw_lyrics_input"
             )
-
+            
             with st.expander("📚 Suno meta tags reference"):
                 for cat, tags in SUNO_TAGS.items():
                     st.markdown(f"**{cat}**")
@@ -967,29 +1013,21 @@ def main():
 
             if st.button("✨ Apply Suno meta tags", use_container_width=True):
                 if raw_input:
-                    with st.spinner(
-                        "AI is structuring your lyrics based on the song style..."
-                    ):
-                        st.session_state.formatted_lyrics = format_lyrics_with_tags(
-                            raw_input, ai
-                        )
+                    with st.spinner("AI is structuring your lyrics based on the song style..."):
+                        st.session_state.formatted_lyrics = format_lyrics_with_tags(raw_input, ai)
                 else:
                     st.warning("Please paste some lyrics first.")
-
+        
         with l_col2:
             st.caption("Formatted output")
             if st.session_state.formatted_lyrics:
-                st.code(
-                    st.session_state.formatted_lyrics,
-                    language="markdown",
-                    line_numbers=False,
-                )
+                st.code(st.session_state.formatted_lyrics, language="markdown", line_numbers=False)
             else:
                 st.markdown(
                     '<div class="lyric-output" style="color:#555; display:flex; align-items:center; justify-content:center;">Result will appear here...</div>',
-                    unsafe_allow_html=True,
+                    unsafe_allow_html=True
                 )
-        st.markdown("</div>", unsafe_allow_html=True)
+        st.markdown('</div>', unsafe_allow_html=True)
 
 
 if __name__ == "__main__":
