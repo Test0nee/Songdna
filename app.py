@@ -45,7 +45,7 @@ st.markdown("""
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=JetBrains+Mono:wght@400;700&display=swap');
     
     .stApp {
-        background-color: #050505;
+        background-color: #020617;
         background-image: radial-gradient(circle at 50% 0%, #1e1b4b 0%, #020617 60%);
         font-family: 'Inter', sans-serif;
         color: #fff;
@@ -54,26 +54,105 @@ st.markdown("""
     .block-container { padding-top: 2rem; max-width: 1200px; }
     header, footer, [data-testid="stSidebar"] { display: none !important; }
 
-    /* HERO */
-    .hero-wrapper {
-        position: relative; border-radius: 24px; overflow: hidden; margin-bottom: 30px;
-        box-shadow: 0 25px 50px -12px rgba(0,0,0,0.7); height: 350px;
-        background: #0f172a; border: 1px solid rgba(255,255,255,0.1);
+    /* --- NEW HERO SECTION --- */
+    .hero-container {
+        position: relative;
+        border-radius: 24px;
+        overflow: hidden;
+        margin-bottom: 30px;
+        box-shadow: 0 25px 50px -12px rgba(0,0,0,0.7);
+        border: 1px solid rgba(255,255,255,0.1);
+        height: 380px;
+        display: flex;
+        align-items: center;
     }
-    .hero-bg { width: 100%; height: 100%; object-fit: cover; opacity: 0.6; filter: blur(20px) saturate(1.2); transform: scale(1.1); }
-    .hero-overlay {
-        position: absolute; inset: 0;
-        background: linear-gradient(180deg, rgba(2,6,23,0) 0%, rgba(2,6,23,0.8) 60%, #020617 100%);
-        display: flex; align-items: flex-end; padding: 40px;
-    }
-    .hero-content { width: 100%; display: flex; justify-content: space-between; align-items: flex-end; }
-    .hero-text h1 { font-size: 4rem; font-weight: 900; margin: 0; line-height: 1; letter-spacing: -2px; text-shadow: 0 4px 20px rgba(0,0,0,0.5); }
-    .hero-text h2 { font-size: 1.5rem; color: #94a3b8; margin: 10px 0 20px 0; font-weight: 400; }
     
-    .pill {
-        display: inline-block; padding: 6px 14px; border-radius: 50px;
-        background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.1);
-        font-size: 0.8rem; margin-right: 8px; backdrop-filter: blur(10px);
+    /* Layer 1: The blurred background image */
+    .hero-bg-blur {
+        position: absolute;
+        top: 0; left: 0; width: 100%; height: 100%;
+        background-size: cover;
+        background-position: center;
+        filter: blur(40px) saturate(1.5) brightness(0.6);
+        z-index: 0;
+        transform: scale(1.1); /* Prevents white edges from blur */
+    }
+    
+    /* Layer 2: The gradient overlay to make text readable */
+    .hero-overlay-gradient {
+        position: absolute;
+        top: 0; left: 0; width: 100%; height: 100%;
+        background: linear-gradient(90deg, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0.4) 60%, rgba(0,0,0,0.1) 100%);
+        z-index: 1;
+    }
+    
+    /* Layer 3: The Content */
+    .hero-content-flex {
+        position: relative;
+        z-index: 2;
+        display: flex;
+        align-items: center;
+        padding: 40px;
+        width: 100%;
+        gap: 40px;
+    }
+    
+    /* The Square Album Art */
+    .album-cover-square {
+        width: 280px;
+        height: 280px;
+        border-radius: 12px;
+        box-shadow: 0 15px 40px rgba(0,0,0,0.6);
+        object-fit: cover;
+        border: 1px solid rgba(255,255,255,0.2);
+        flex-shrink: 0; /* Prevents shrinking */
+    }
+    
+    /* The Text Metadata */
+    .hero-text-col {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+    }
+    
+    .verified-pill {
+        display: inline-flex; align-items: center; gap: 6px;
+        background: rgba(255,255,255,0.15); 
+        border: 1px solid rgba(255,255,255,0.2);
+        padding: 6px 12px; border-radius: 50px;
+        font-size: 0.75rem; font-weight: 700; letter-spacing: 1px;
+        text-transform: uppercase; margin-bottom: 16px;
+        width: fit-content;
+        backdrop-filter: blur(10px);
+    }
+    
+    h1.hero-title {
+        font-size: 4.5rem;
+        font-weight: 900;
+        margin: 0;
+        line-height: 1;
+        letter-spacing: -2px;
+        text-shadow: 0 4px 30px rgba(0,0,0,0.5);
+    }
+    
+    h2.hero-subtitle {
+        font-size: 2rem;
+        color: rgba(255,255,255,0.8);
+        margin: 10px 0 25px 0;
+        font-weight: 500;
+        letter-spacing: -0.5px;
+    }
+    
+    .meta-row {
+        display: flex; gap: 10px;
+    }
+    
+    .meta-tag {
+        background: rgba(0,0,0,0.5);
+        border: 1px solid rgba(255,255,255,0.1);
+        padding: 8px 16px; border-radius: 8px;
+        font-size: 0.85rem; color: #e2e8f0;
+        font-weight: 600;
     }
 
     /* GLASS PANELS */
@@ -107,12 +186,6 @@ st.markdown("""
     /* LYRICS */
     .stTextArea textarea { background: #0b0f19 !important; border: 1px solid #1e293b !important; color: #cbd5e1 !important; }
     .code-block { background: #0b0f19; padding: 20px; border-radius: 12px; font-family: 'JetBrains Mono', monospace; color: #a5b4fc; border: 1px solid #1e293b; }
-    
-    /* BRANDING */
-    .brand-wrap { text-align: center; margin-bottom: 24px; }
-    .brand-title { font-size: 2.6rem; font-weight: 900; letter-spacing: 0.24em; text-transform: uppercase; margin: 0; text-shadow: 0 0 35px rgba(59,130,246,0.5); }
-    .brand-subtitle { font-size: 0.78rem; letter-spacing: 0.32em; text-transform: uppercase; color: #6b7280; margin-top: 4px; }
-    .top-action { text-align: center; margin: 10px 0 24px 0; }
     </style>
 """, unsafe_allow_html=True)
 
@@ -150,22 +223,30 @@ async def fetch_artist_image(artist):
         except: pass
     return "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=1200"
 
+def extract_dominant_color(image_url):
+    """Simple color extraction for dynamic gradients"""
+    try:
+        response = requests.get(image_url)
+        img = Image.open(BytesIO(response.content))
+        img = img.resize((1, 1))
+        color = img.getpixel((0, 0))
+        return f"rgba({color[0]},{color[1]},{color[2]}, 0.8)"
+    except:
+        return "rgba(56, 189, 248, 0.8)"
+
 # --- 5. AUDIO ENGINE (FIXED) ---
 def safe_load_audio(file_path):
-    """ Tries multiple ways to load audio """
     errors = []
-    # Method 1: Librosa Standard
     try:
         y, sr = librosa.load(file_path, sr=None, duration=180)
         return y, sr, None
     except Exception as e:
         errors.append(f"Librosa: {str(e)}")
     
-    # Method 2: Soundfile (Fallback)
     try:
         import soundfile as sf
         y, sr = sf.read(file_path)
-        if len(y.shape) > 1: y = y.mean(axis=1) # Mono
+        if len(y.shape) > 1: y = y.mean(axis=1)
         return y, sr, None
     except Exception as e:
         errors.append(f"Soundfile: {str(e)}")
@@ -174,43 +255,33 @@ def safe_load_audio(file_path):
 
 def extract_audio_features(file_path):
     y, sr, error = safe_load_audio(file_path)
-    
-    if error:
-        return {"success": False, "error": error}
+    if error: return {"success": False, "error": error}
 
-    # Analysis
     duration = librosa.get_duration(y=y, sr=sr)
     
-    # --- TEMPO FIX: Handle Scalar vs Array ---
     try:
         tempo, _ = librosa.beat.beat_track(y=y, sr=sr)
         if np.ndim(tempo) > 0: tempo = tempo[0]
         bpm = round(float(tempo)) if float(tempo) > 0 else 120
-    except:
-        bpm = 120 
+    except: bpm = 120 
     
-    # Key
     chroma = librosa.feature.chroma_cqt(y=y, sr=sr)
     key = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"][np.argmax(np.sum(chroma, axis=1))]
     
-    # Energy
     rms = librosa.feature.rms(y=y)[0]
     energy_score = np.mean(rms)
     energy = "High" if energy_score > 0.1 else "Mid" if energy_score > 0.05 else "Low"
     
-    # Visualizer Data
     hop = 512
     viz_rms = librosa.feature.rms(y=y, hop_length=hop)[0]
     viz_rms = viz_rms / (np.max(viz_rms) + 1e-9) 
     
-    # --- PEAK PICK FIX (Named Arguments) ---
     try:
         onset_env = librosa.onset.onset_strength(y=y, sr=sr)
-        # Using named arguments to satisfy modern Librosa requirements
+        # UPDATED: Named arguments to fix TypeError
         peaks = librosa.util.peak_pick(onset_env, pre_max=3, post_max=3, pre_avg=3, post_avg=5, delta=0.5, wait=10)
         section_times = librosa.frames_to_time(peaks, sr=sr)
-    except Exception as e:
-        section_times = []
+    except: section_times = []
     
     filtered_sections = []
     last = 0
@@ -220,13 +291,9 @@ def extract_audio_features(file_path):
             last = t
 
     return {
-        "success": True,
-        "bpm": bpm,
-        "key": key,
-        "energy": energy,
+        "success": True, "bpm": bpm, "key": key, "energy": energy,
         "duration": f"{int(duration//60)}:{int(duration%60):02d}",
-        "waveform": viz_rms.tolist(),
-        "sections": filtered_sections
+        "waveform": viz_rms.tolist(), "sections": filtered_sections
     }
 
 async def identify_song(file_path):
@@ -266,9 +333,8 @@ def main():
     if 'ai' not in st.session_state: st.session_state.ai = None
     if 'lyrics' not in st.session_state: st.session_state.lyrics = ""
 
-    st.markdown("""<div class="brand-wrap"><div class="brand-title">SUNOSONIC</div><div class="brand-subtitle">AI AUDIO INTELLIGENCE STUDIO</div></div>""", unsafe_allow_html=True)
+    st.markdown("<h1 style='text-align:center; letter-spacing:-2px; margin-bottom:10px;'>SUNOSONIC</h1>", unsafe_allow_html=True)
 
-    # UPLOAD
     if not st.session_state.data:
         st.markdown('<div class="top-action"><span style="font-size:0.8rem; letter-spacing:0.18em; text-transform:uppercase; color:#9ca3af;">Upload a track to begin analysis</span></div>', unsafe_allow_html=True)
         uploaded = st.file_uploader("Drop audio file", type=['mp3','wav','ogg'])
@@ -285,7 +351,6 @@ def main():
                     return
 
                 meta = run_async(identify_song(tmp_path))
-                
                 full_data = {**stats, **(meta if meta['found'] else {"title":"Unknown","artist":"Deep Scan","img":None,"genre":"Unknown"})}
                 full_data['artist_bg'] = run_async(fetch_artist_image(full_data['artist']))
                 
@@ -294,26 +359,29 @@ def main():
                 os.remove(tmp_path)
                 st.rerun()
 
-    # DASHBOARD
     else:
         d = st.session_state.data
         ai = st.session_state.ai or {}
         
-        bg = d.get('artist_bg') or "https://images.unsplash.com/photo-1470225620780-dba8ba36b745"
+        # --- NEW HERO BANNER ---
+        img_url = d.get('img') or d.get('artist_bg') or "https://images.unsplash.com/photo-1470225620780-dba8ba36b745"
+        
         st.markdown(f"""
-            <div class="hero-wrapper">
-                <img src="{bg}" class="hero-bg">
-                <div class="hero-overlay">
-                    <div class="hero-content">
-                        <div class="hero-text">
-                            <div class="pill">✓ VERIFIED ANALYSIS</div>
-                            <h1>{d['artist']}</h1>
-                            <h2>{d['title']}</h2>
-                            <div>
-                                <span class="pill">🎵 {ai.get('genre','Unknown')}</span>
-                                <span class="pill">⏱ {d['bpm']} BPM</span>
-                                <span class="pill">🎹 {d['key']}</span>
-                            </div>
+            <div class="hero-container">
+                <div class="hero-bg-blur" style="background-image: url('{img_url}');"></div>
+                <div class="hero-overlay-gradient"></div>
+                <div class="hero-content-flex">
+                    <img src="{img_url}" class="album-cover-square">
+                    <div class="hero-text-col">
+                        <div class="verified-pill">
+                            <span style="color:#4ade80;">●</span> {d.get('source', 'AI Analysis').upper()}
+                        </div>
+                        <h1 class="hero-title">{d['artist']}</h1>
+                        <h2 class="hero-subtitle">{d['title']}</h2>
+                        <div class="meta-row">
+                            <div class="meta-tag">🎵 {ai.get('genre', 'Unknown')}</div>
+                            <div class="meta-tag">⏱ {d['bpm']} BPM</div>
+                            <div class="meta-tag">🎹 {d['key']}</div>
                         </div>
                     </div>
                 </div>
