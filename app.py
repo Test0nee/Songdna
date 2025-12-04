@@ -13,6 +13,7 @@ import librosa
 import plotly.graph_objects as go
 from PIL import Image
 from io import BytesIO
+import textwrap  # <--- NEW IMPORT TO FIX HTML RENDERING
 
 # --- SPOTIFY AUTH ---
 SPOTIFY_CLIENT_ID = st.secrets.get("SPOTIFY_CLIENT_ID")
@@ -193,14 +194,12 @@ def extract_dominant_color(image_url):
 # --- 5. AUDIO ENGINE ---
 def safe_load_audio(file_path):
     errors = []
-    # Try Librosa first
     try:
         y, sr = librosa.load(file_path, sr=None, duration=180)
         return y, sr, None
     except Exception as e:
         errors.append(f"Librosa: {str(e)}")
     
-    # Try Soundfile as backup
     try:
         import soundfile as sf
         y, sr = sf.read(file_path)
@@ -235,7 +234,6 @@ def extract_audio_features(file_path):
     
     try:
         onset_env = librosa.onset.onset_strength(y=y, sr=sr)
-        # Using named arguments to avoid TypeError in newer librosa
         peaks = librosa.util.peak_pick(onset_env, pre_max=20, post_max=20, pre_avg=20, post_avg=20, delta=0.5, wait=100)
         section_times = librosa.frames_to_time(peaks, sr=sr)
     except: section_times = []
@@ -268,7 +266,7 @@ async def identify_song(file_path):
     except: pass
     return {"found": False}
 
-# --- AI BRAIN (WITH FIXED HTML OUTPUT) ---
+# --- AI BRAIN (GENRE DNA + INTENT) ---
 def analyze_gemini(data, intent="Original Style (Analysis)"):
     if not api_key: return None
     model = genai.GenerativeModel("gemini-2.5-flash")
@@ -277,18 +275,19 @@ def analyze_gemini(data, intent="Original Style (Analysis)"):
     
     prompt = f"""
     Act as a Music Producer.
-    SOURCE AUDIO: {data.get('title','Unknown')} - {data.get('bpm')} BPM, {data.get('key')}, {data.get('energy')} Energy.
-    STRUCTURE SEGMENTS: {seg_str}
-    USER INTENT: "{intent}"
+    SOURCE AUDIO DNA: {data.get('title','Unknown')} by {data.get('artist','Unknown')}.
+    BPM: {data.get('bpm')} | Key: {data.get('key')} | Energy: {data.get('energy')}.
+    STRUCTURE SEGMENTS: {seg_str}.
+    USER INTENT: "{intent}".
     
     TASK:
-    1. Estimate Genre Breakdown (e.g. 40% Pop, 60% Rock).
-    2. Map structure (Intro, Verse, Chorus).
+    1. Genre Breakdown (%).
+    2. Map structure.
     3. Create Suno Prompt.
     
     OUTPUT JSON:
     {{
-        "mood": "Mood",
+        "mood": "Modified Mood",
         "genre_breakdown": {{"Main Genre": 50, "Sub Genre": 30, "Influence": 20}},
         "structure_map": [
             {{"label": "Intro", "start": 0, "color": "#a855f7"}}, 
@@ -351,7 +350,7 @@ def main():
 
         img_url = d.get('img') or d.get('artist_bg') or "https://images.unsplash.com/photo-1470225620780-dba8ba36b745"
         
-        st.markdown(f"""
+        st.markdown(textwrap.dedent(f"""
             <div class="hero-container">
                 <div class="hero-bg-blur" style="background-image: url('{img_url}');"></div>
                 <div class="hero-overlay-gradient"></div>
@@ -369,11 +368,11 @@ def main():
                     </div>
                 </div>
             </div>
-        """, unsafe_allow_html=True)
+        """), unsafe_allow_html=True)
 
         c1, c2 = st.columns(2)
         with c1:
-            # --- GENRE DNA VISUALIZATION (HTML FIX) ---
+            # --- GENRE DNA VISUALIZATION (DEDENT FIX) ---
             breakdown_html = ""
             colors = ["#38bdf8", "#818cf8", "#c084fc", "#f472b6"]
             if 'genre_breakdown' in ai:
@@ -386,7 +385,7 @@ def main():
                     </div>
                     """
             
-            st.markdown(f"""
+            st.markdown(textwrap.dedent(f"""
                 <div class="glass-panel">
                     <div class="panel-title">🧬 GENRE DNA</div>
                     <div style="margin-bottom:15px;">{breakdown_html}</div>
@@ -395,12 +394,10 @@ def main():
                         <div class="stat-card"><div class="stat-label">VOCAL TYPE</div><div class="stat-val">{ai.get('vocal_type','-')}</div></div>
                     </div>
                 </div>
-            """, unsafe_allow_html=True)
+            """), unsafe_allow_html=True)
             
         with c2:
-            st.markdown('<div class="glass-panel">', unsafe_allow_html=True)
-            st.markdown('<div class="panel-title">📏 STRUCTURE MAP</div>', unsafe_allow_html=True)
-            
+            st.markdown('<div class="glass-panel"><div class="panel-title">📏 STRUCTURE MAP</div>', unsafe_allow_html=True)
             structure_map = ai.get('structure_map', [])
             total_dur = d.get('segments', [{}])[-1].get('end', 180)
             
@@ -411,10 +408,8 @@ def main():
                 width_pct = (duration / total_dur) * 100
                 timeline_html += f'<div style="width:{width_pct}%; background:{sec.get("color","#555")}; display:flex; align-items:center; justify-content:center; color:white; font-size:10px; border-right:1px solid rgba(0,0,0,0.5);">{sec["label"]}</div>'
             timeline_html += '</div>'
-            
             st.markdown(timeline_html, unsafe_allow_html=True)
-            st.markdown("<div style='margin-top:15px; color:#94a3b8; font-size:0.8rem;'>AI estimated arrangement based on energy shifts.</div>", unsafe_allow_html=True)
-            st.markdown('</div>', unsafe_allow_html=True)
+            st.markdown("</div>", unsafe_allow_html=True)
 
         st.markdown('<div class="panel-title" style="margin-left:5px">📈 STRUCTURAL DYNAMICS</div>', unsafe_allow_html=True)
         y = np.array(d['waveform'])
@@ -445,23 +440,17 @@ def main():
 
         st.markdown('<div class="panel-title">🎛️ STYLE REMIXER</div>', unsafe_allow_html=True)
         st.markdown('<div class="remix-box">', unsafe_allow_html=True)
-        
         rc1, rc2 = st.columns([1, 2])
         with rc1:
-            intent_preset = st.selectbox(
-                "Choose Vibe Modifier", 
-                ["Original Analysis", "More Energetic", "Darker / Moody", "Cinematic / Epic", "80s Retro", "Acoustic / Stripped", "Lofi / Chill", "Heavy / Aggressive"]
-            )
+            intent_preset = st.selectbox("Choose Vibe Modifier", ["Original Analysis", "More Energetic", "Darker / Moody", "Cinematic", "80s Retro", "Acoustic", "Lofi", "Heavy"])
         with rc2:
             custom_intent = st.text_input("Or type custom intent...", placeholder="e.g. 'Cyberpunk chase scene'")
-        
         final_intent = custom_intent if custom_intent else intent_preset
         
         if st.button(f"✨ REMIX PROMPT: {final_intent}", use_container_width=True):
-            with st.spinner(f"Morphing audio DNA to '{final_intent}'..."):
+            with st.spinner(f"Morphing audio DNA..."):
                 st.session_state.ai = analyze_gemini(d, intent=final_intent)
                 st.rerun()
-        
         st.markdown('</div>', unsafe_allow_html=True)
 
         c3, c4 = st.columns([1.5, 1])
