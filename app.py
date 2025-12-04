@@ -21,7 +21,7 @@ SPOTIFY_CLIENT_SECRET = st.secrets.get("SPOTIFY_CLIENT_SECRET")
 def get_spotify_token():
     if not SPOTIFY_CLIENT_ID or not SPOTIFY_CLIENT_SECRET:
         return None
-    url = "https://accounts.spotify.com/api/token" # Corrected URL
+    url = "https://accounts.spotify.com/api/token" 
     headers = {"Content-Type": "application/x-www-form-urlencoded"}
     data = {"grant_type": "client_credentials"}
     try:
@@ -193,14 +193,12 @@ def extract_dominant_color(image_url):
 # --- 5. AUDIO ENGINE ---
 def safe_load_audio(file_path):
     errors = []
-    # Try Librosa first
     try:
         y, sr = librosa.load(file_path, sr=None, duration=180)
         return y, sr, None
     except Exception as e:
         errors.append(f"Librosa: {str(e)}")
     
-    # Try Soundfile as backup (Works for wav/flac even without ffmpeg)
     try:
         import soundfile as sf
         y, sr = sf.read(file_path)
@@ -235,7 +233,6 @@ def extract_audio_features(file_path):
     
     try:
         onset_env = librosa.onset.onset_strength(y=y, sr=sr)
-        # Using named args to prevent TypeError in newer Librosa versions
         peaks = librosa.util.peak_pick(onset_env, pre_max=20, post_max=20, pre_avg=20, post_avg=20, delta=0.5, wait=100)
         section_times = librosa.frames_to_time(peaks, sr=sr)
     except: section_times = []
@@ -330,7 +327,6 @@ def main():
                 stats = extract_audio_features(tmp_path)
                 if not stats['success']:
                     st.error(f"Analysis Failed: {stats['error']}")
-                    st.info("Ensure ffmpeg is installed on the server.")
                     os.remove(tmp_path)
                     return
 
@@ -350,21 +346,9 @@ def main():
         d = st.session_state.data
         ai = st.session_state.ai or {}
         
-        # --- DYNAMIC BACKGROUND ---
         rgb = d.get('color_rgb', (30, 27, 75))
-        st.markdown(f"""
-            <style>
-            .stApp {{
-                background-image: radial-gradient(
-                    circle at 50% 0%, 
-                    rgba({rgb[0]}, {rgb[1]}, {rgb[2]}, 0.35) 0%, 
-                    #050505 70%
-                ) !important;
-            }}
-            </style>
-        """, unsafe_allow_html=True)
+        st.markdown(f"""<style>.stApp {{ background-image: radial-gradient(circle at 50% 0%, rgba({rgb[0]}, {rgb[1]}, {rgb[2]}, 0.35) 0%, #050505 70%) !important; }}</style>""", unsafe_allow_html=True)
 
-        # --- HERO ---
         img_url = d.get('img') or d.get('artist_bg') or "https://images.unsplash.com/photo-1470225620780-dba8ba36b745"
         
         st.markdown(f"""
@@ -374,9 +358,7 @@ def main():
                 <div class="hero-content-flex">
                     <img src="{img_url}" class="album-cover-square">
                     <div class="hero-text-col">
-                        <div class="verified-pill">
-                            <span style="color:#4ade80;">●</span> {d.get('source', 'AI Analysis').upper()}
-                        </div>
+                        <div class="verified-pill"><span style="color:#4ade80;">●</span> {d.get('source', 'AI Analysis').upper()}</div>
                         <h1 class="hero-title">{d['artist']}</h1>
                         <h2 class="hero-subtitle">{d['title']}</h2>
                         <div class="meta-row">
@@ -391,7 +373,6 @@ def main():
 
         c1, c2 = st.columns(2)
         with c1:
-            # --- GENRE DNA VISUALIZATION ---
             breakdown_html = ""
             colors = ["#38bdf8", "#818cf8", "#c084fc", "#f472b6"]
             if 'genre_breakdown' in ai:
@@ -400,9 +381,7 @@ def main():
                     breakdown_html += f"""
                     <div class="dna-bar-row">
                         <div class="dna-labels"><span>{genre}</span><span>{pct}%</span></div>
-                        <div class="dna-track">
-                            <div class="dna-fill" style="width:{pct}%; background:{color};"></div>
-                        </div>
+                        <div class="dna-track"><div class="dna-fill" style="width:{pct}%; background:{color};"></div></div>
                     </div>
                     """
             
@@ -418,7 +397,6 @@ def main():
             """, unsafe_allow_html=True)
             
         with c2:
-            # --- STRUCTURE MAP ---
             st.markdown('<div class="glass-panel">', unsafe_allow_html=True)
             st.markdown('<div class="panel-title">📏 STRUCTURE MAP</div>', unsafe_allow_html=True)
             
@@ -434,10 +412,9 @@ def main():
             timeline_html += '</div>'
             
             st.markdown(timeline_html, unsafe_allow_html=True)
-            st.markdown("<div style='margin-top:15px; color:#94a3b8; font-size:0.8rem;'>AI estimated arrangement based on energy shifts.</div>", unsafe_allow_html=True)
+            st.markdown("<div style='margin-top:15px; color:#94a3b8; font-size:0.8rem;'>AI estimated arrangement.</div>", unsafe_allow_html=True)
             st.markdown('</div>', unsafe_allow_html=True)
 
-        # --- VISUALIZER ---
         st.markdown('<div class="panel-title" style="margin-left:5px">📈 STRUCTURAL DYNAMICS</div>', unsafe_allow_html=True)
         y = np.array(d['waveform'])
         x = np.linspace(0, 100, len(y))
@@ -465,7 +442,6 @@ def main():
 
         st.markdown("<br>", unsafe_allow_html=True)
 
-        # --- STYLE REMIX ---
         st.markdown('<div class="panel-title">🎛️ STYLE REMIXER</div>', unsafe_allow_html=True)
         st.markdown('<div class="remix-box">', unsafe_allow_html=True)
         
@@ -476,4 +452,42 @@ def main():
                 ["Original Analysis", "More Energetic", "Darker / Moody", "Cinematic / Epic", "80s Retro", "Acoustic / Stripped", "Lofi / Chill", "Heavy / Aggressive"]
             )
         with rc2:
-            custom_intent = st.text_input("Or type custom intent...", placeholder="e.g. 'Cyberpunk chase
+            custom_intent = st.text_input(
+                "Or type custom intent...", 
+                placeholder="e.g. 'Cyberpunk chase scene with female vocals'"
+            )
+        
+        final_intent = custom_intent if custom_intent else intent_preset
+        
+        if st.button(f"✨ REMIX PROMPT: {final_intent}", use_container_width=True):
+            with st.spinner(f"Morphing audio DNA to '{final_intent}'..."):
+                st.session_state.ai = analyze_gemini(d, intent=final_intent)
+                st.rerun()
+        
+        st.markdown('</div>', unsafe_allow_html=True)
+
+        c3, c4 = st.columns([1.5, 1])
+        with c3:
+            st.markdown(f'<div class="glass-panel"><div class="panel-title">🎹 SUNO PROMPT</div><div class="code-block">{ai.get("suno_prompt","...")}</div></div>', unsafe_allow_html=True)
+        with c4:
+            tips = "".join([f"<li style='margin-bottom:8px; color:#94a3b8'>{t}</li>" for t in ai.get("tips",[])])
+            st.markdown(f'<div class="glass-panel"><div class="panel-title">💡 TIPS</div><ul>{tips}</ul></div>', unsafe_allow_html=True)
+
+        st.markdown('<div class="glass-panel" style="border-color:#4f46e5">', unsafe_allow_html=True)
+        st.markdown('<div class="panel-title">📝 LYRIC TAGGER</div>', unsafe_allow_html=True)
+        l1, l2 = st.columns(2)
+        with l1:
+            raw = st.text_area("Input Lyrics", height=250, placeholder="Paste your lyrics here...")
+            if st.button("✨ Auto-Structure Lyrics", use_container_width=True):
+                st.session_state.lyrics = format_lyrics(raw, ai.get('genre'))
+        with l2:
+            if st.session_state.lyrics: st.code(st.session_state.lyrics, language="markdown")
+            else: st.info("Result will appear here")
+        st.markdown('</div>', unsafe_allow_html=True)
+
+        if st.button("RESET"):
+            st.session_state.data = None
+            st.rerun()
+
+if __name__ == "__main__":
+    main()
