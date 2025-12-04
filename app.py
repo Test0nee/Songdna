@@ -41,7 +41,7 @@ st.markdown("""
     
     header[data-testid="stHeader"], footer, [data-testid="stSidebar"] {display: none;}
     
-    /* HERO SECTION */
+    /* HERO SECTION - FULL ARTIST IMAGE, SPOTIFY STYLE */
     .hero-wrapper {
         position: relative;
         border-radius: 24px;
@@ -49,51 +49,34 @@ st.markdown("""
         margin-bottom: 25px;
         box-shadow: 0 20px 50px -20px rgba(0,0,0,0.7);
         border: 1px solid rgba(255,255,255,0.05);
-        min-height: 260px;
-        max-height: 420px;
+        height: 320px;
     }
     .hero-bg { 
         width: 100%; 
         height: 100%; 
         object-fit: cover; 
-        filter: blur(16px) brightness(0.5);
-        transform: scale(1.08);
+        transform: scale(1.03);
+        filter: brightness(0.7);
     }
     .hero-overlay {
-        position: absolute; inset: 0;
-        background: linear-gradient(135deg, rgba(0,0,0,0.75) 0%, rgba(15,15,15,0.85) 40%, rgba(0,0,0,0.9) 100%);
+        position: absolute; 
+        inset: 0;
+        /* dark at bottom, fading to transparent at top */
+        background: linear-gradient(
+            to top, 
+            rgba(0,0,0,0.9) 0%, 
+            rgba(0,0,0,0.65) 40%, 
+            rgba(0,0,0,0.0) 85%
+        );
         display: flex; 
-        flex-direction: column; 
-        justify-content: center; 
+        align-items: flex-end; 
         padding: 32px 40px;
     }
 
-    .hero-content {
-        display: flex;
-        gap: 24px;
-        align-items: flex-end;
-    }
-    .hero-cover {
-        flex: 0 0 210px;
-        max-width: 210px;
-        aspect-ratio: 1 / 1;
-        border-radius: 20px;
-        overflow: hidden;
-        box-shadow: 0 18px 35px rgba(0,0,0,0.8);
-        border: 1px solid rgba(255,255,255,0.12);
-        background: radial-gradient(circle at 20% 0%, rgba(148,163,184,0.25), rgba(15,23,42,1));
-    }
-    .hero-cover img {
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-        display: block;
-    }
     .hero-meta {
-        flex: 1;
-        min-width: 0;
+        max-width: 70%;
     }
-    
+
     .verified-badge {
         background: rgba(56, 189, 248, 0.2); 
         color: #38bdf8;
@@ -109,7 +92,7 @@ st.markdown("""
         backdrop-filter: blur(10px);
     }
     .artist-title { 
-        font-size: 3.4rem; 
+        font-size: 3.6rem; 
         font-weight: 900; 
         line-height: 0.95; 
         margin: 10px 0 4px 0; 
@@ -123,15 +106,15 @@ st.markdown("""
     }
     .song-subtitle { 
         font-size: 1.3rem; 
-        color: #cbd5f5; 
+        color: #e5e7eb; 
         margin-bottom: 18px; 
-        letter-spacing: -0.5px; 
+        letter-spacing: -0.3px; 
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
     }
     .meta-pill { 
-        background: rgba(15,23,42,0.9); 
+        background: rgba(15,23,42,0.85); 
         border: 1px solid rgba(148,163,184,0.5); 
         padding: 6px 14px; 
         border-radius: 999px; 
@@ -288,6 +271,7 @@ st.markdown("""
     }
     </style>
 """, unsafe_allow_html=True)
+
 
 # --- 3. KNOWLEDGE BASE ---
 SUNO_TAGS = {
@@ -678,37 +662,26 @@ def main():
         data = st.session_state.song_data
         ai = st.session_state.analysis or {}
 
-        # Choose cover image: album art if present, otherwise artist background
-        if data.get('album_art') and isinstance(data.get('album_art'), str) and 'http' in data['album_art']:
-            cover_url = data['album_art']
-        else:
-            cover_url = data.get('artist_bg')
-
-        # HERO BANNER (Spotify-like layout)
+        # HERO BANNER - full artist image background, text at bottom left
         st.markdown(f"""
             <div class="hero-wrapper">
                 <img src="{data['artist_bg']}" class="hero-bg">
                 <div class="hero-overlay">
-                    <div class="hero-content">
-                        <div class="hero-cover">
-                            <img src="{cover_url}">
-                        </div>
-                        <div class="hero-meta">
-                            <div><span class="verified-badge">✓ {data['source'].upper()} ANALYSIS</span></div>
-                            <div class="artist-title">{data['artist']}</div>
-                            <div class="song-subtitle">{data['title']}</div>
-                            <div class="meta-tags">
-                                <span class="meta-pill">🎵 {ai.get('genre', data.get('genre', 'Unknown'))}</span>
-                                <span class="meta-pill">⏱ {ai.get('tempo', data.get('bpm', '--'))}</span>
-                                <span class="meta-pill">🎹 {ai.get('key', data.get('key', '--'))}</span>
-                            </div>
+                    <div class="hero-meta">
+                        <div><span class="verified-badge">✓ {data['source'].upper()} ANALYSIS</span></div>
+                        <div class="artist-title">{data['artist']}</div>
+                        <div class="song-subtitle">{data['title']}</div>
+                        <div class="meta-tags">
+                            <span class="meta-pill">🎵 {ai.get('genre', data.get('genre', 'Unknown'))}</span>
+                            <span class="meta-pill">⏱ {ai.get('tempo', data.get('bpm', '--'))}</span>
+                            <span class="meta-pill">🎹 {ai.get('key', data.get('key', '--'))}</span>
                         </div>
                     </div>
                 </div>
             </div>
         """, unsafe_allow_html=True)
 
-        # AUDIO PLAYER ONLY (no extra album image)
+        # AUDIO PLAYER ONLY
         if st.session_state.get("uploaded_bytes"):
             st.audio(st.session_state.uploaded_bytes, format="audio/mp3")
 
@@ -843,6 +816,7 @@ def main():
             st.session_state.formatted_lyrics = ""
             st.session_state.uploaded_bytes = None
             st.rerun()
+
 
 
 if __name__ == "__main__":
