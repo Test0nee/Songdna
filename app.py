@@ -1,4 +1,5 @@
 import streamlit as st
+import streamlit.components.v1 as components
 import asyncio
 from shazamio import Shazam
 import google.generativeai as genai
@@ -13,6 +14,23 @@ import plotly.graph_objects as go
 from PIL import Image
 from io import BytesIO
 
+# --- SPOTIFY AUTH ---
+SPOTIFY_CLIENT_ID = st.secrets.get("SPOTIFY_CLIENT_ID")
+SPOTIFY_CLIENT_SECRET = st.secrets.get("SPOTIFY_CLIENT_SECRET")
+
+def get_spotify_token():
+    if not SPOTIFY_CLIENT_ID or not SPOTIFY_CLIENT_SECRET:
+        return None
+    url = "https://accounts.spotify.com/api/token" 
+    headers = {"Content-Type": "application/x-www-form-urlencoded"}
+    data = {"grant_type": "client_credentials"}
+    try:
+        r = requests.post(url, headers=headers, data=data, auth=(SPOTIFY_CLIENT_ID, SPOTIFY_CLIENT_SECRET))
+        if r.status_code == 200:
+            return r.json().get("access_token")
+    except Exception:
+        return None
+
 # --- CONFIGURATION ---
 st.set_page_config(
     page_title="SunoSonic Studio",
@@ -20,24 +38,6 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="collapsed"
 )
-
-# --- SPOTIFY AUTH ---
-SPOTIFY_CLIENT_ID = st.secrets.get("SPOTIFY_CLIENT_ID")
-SPOTIFY_CLIENT_SECRET = st.secrets.get("SPOTIFY_CLIENT_SECRET")
-
-def get_spotify_token():
-    if not SPOTIFY_CLIENT_ID or not SPOTIFY_CLIENT_SECRET: return None
-    try:
-        r = requests.post(
-            "https://accounts.spotify.com/api/token", 
-            headers={"Content-Type": "application/x-www-form-urlencoded"},
-            data={"grant_type": "client_credentials"},
-            auth=(SPOTIFY_CLIENT_ID, SPOTIFY_CLIENT_SECRET),
-            timeout=5
-        )
-        if r.status_code == 200: return r.json().get("access_token")
-    except: return None
-    return None
 
 # --- UI CSS ---
 st.markdown("""
@@ -89,7 +89,7 @@ st.markdown("""
         color: #94a3b8; font-weight: 700; margin-bottom: 15px; display: flex; align-items: center; gap: 8px;
     }
 
-    /* VISUALIZER CONTAINER (DAW STYLE) */
+    /* VISUALIZER CONTAINER */
     .viz-container {
         background: #0b0f19;
         border: 1px solid #1e293b;
@@ -131,7 +131,6 @@ def run_async(coroutine):
 
 async def fetch_artist_image(artist):
     if not artist: return None
-    # 1. Try Spotify
     clean_artist = artist.split(',')[0].strip()
     token = get_spotify_token()
     if token:
@@ -143,12 +142,11 @@ async def fetch_artist_image(artist):
                 if items and items[0].get("images"):
                     return items[0]["images"][0]["url"]
         except: pass
-    # 2. Fallback
     return "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=1200"
 
-# --- 5. AUDIO ENGINE (ROBUST) ---
+# --- 5. AUDIO ENGINE (FIXED TEMPO BUG) ---
 def safe_load_audio(file_path):
-    """ Tries multiple ways to load audio to bypass FFmpeg issues """
+    """ Tries multiple ways to load audio """
     errors = []
     # Method 1: Librosa Standard
     try:
@@ -157,11 +155,11 @@ def safe_load_audio(file_path):
     except Exception as e:
         errors.append(f"Librosa: {str(e)}")
     
-    # Method 2: Soundfile (No FFmpeg needed for WAV/FLAC, fails on MP3)
+    # Method 2: Soundfile (Fallback)
     try:
         import soundfile as sf
         y, sr = sf.read(file_path)
-        if len(y.shape) > 1: y = y.mean(axis=1) # Convert stereo to mono
+        if len(y.shape) > 1: y = y.mean(axis=1) # Mono
         return y, sr, None
     except Exception as e:
         errors.append(f"Soundfile: {str(e)}")
@@ -176,8 +174,16 @@ def extract_audio_features(file_path):
 
     # Analysis
     duration = librosa.get_duration(y=y, sr=sr)
-    tempo, _ = librosa.beat.beat_track(y=y, sr=sr)
-    bpm = round(tempo) if tempo > 0 else 120
+    
+    # --- TEMPO FIX: Handle Scalar vs Array return ---
+    try:
+        tempo, _ = librosa.beat.beat_track(y=y, sr=sr)
+        # Ensure tempo is a single float scalar
+        if np.ndim(tempo) > 0:
+            tempo = tempo[0]
+        bpm = round(float(tempo)) if float(tempo) > 0 else 120
+    except:
+        bpm = 120 # Fallback
     
     # Key
     chroma = librosa.feature.chroma_cqt(y=y, sr=sr)
@@ -188,17 +194,16 @@ def extract_audio_features(file_path):
     energy_score = np.mean(rms)
     energy = "High" if energy_score > 0.1 else "Mid" if energy_score > 0.05 else "Low"
     
-    # Visualizer Data (Downsampled)
+    # Visualizer Data
     hop = 512
     viz_rms = librosa.feature.rms(y=y, hop_length=hop)[0]
-    viz_rms = viz_rms / (np.max(viz_rms) + 1e-9) # Normalize 0-1
+    viz_rms = viz_rms / (np.max(viz_rms) + 1e-9) 
     
-    # Structure Detection (Simple)
+    # Structure Detection
     onset_env = librosa.onset.onset_strength(y=y, sr=sr)
     peaks = librosa.util.peak_pick(onset_env, 3, 3, 3, 5, 0.5, 10)
     section_times = librosa.frames_to_time(peaks, sr=sr)
     
-    # Filter sections (min 15s apart)
     filtered_sections = []
     last = 0
     for t in section_times:
@@ -264,18 +269,14 @@ def main():
                     tmp.write(uploaded.getvalue())
                     tmp_path = tmp.name
                 
-                # 1. Analyze Audio
                 stats = extract_audio_features(tmp_path)
                 if not stats['success']:
                     st.error(f"Analysis Failed: {stats['error']}")
-                    st.info("Try installing FFmpeg on your system to fix this.")
                     os.remove(tmp_path)
                     return
 
-                # 2. Identify
                 meta = run_async(identify_song(tmp_path))
                 
-                # 3. Combine
                 full_data = {**stats, **(meta if meta['found'] else {"title":"Unknown","artist":"Deep Scan","img":None,"genre":"Unknown"})}
                 full_data['artist_bg'] = run_async(fetch_artist_image(full_data['artist']))
                 
@@ -289,7 +290,6 @@ def main():
         d = st.session_state.data
         ai = st.session_state.ai or {}
         
-        # HERO
         bg = d.get('artist_bg') or "https://images.unsplash.com/photo-1470225620780-dba8ba36b745"
         st.markdown(f"""
             <div class="hero-wrapper">
@@ -311,7 +311,6 @@ def main():
             </div>
         """, unsafe_allow_html=True)
 
-        # GRIDS
         c1, c2 = st.columns(2)
         with c1:
             st.markdown(f"""
@@ -338,19 +337,15 @@ def main():
         # DAW VISUALIZER
         st.markdown('<div class="panel-title" style="margin-left:5px">📈 STRUCTURAL DYNAMICS</div>', unsafe_allow_html=True)
         
-        # Prepare Plotly Data
         y = np.array(d['waveform'])
         x = np.linspace(0, 100, len(y))
         
         fig = go.Figure()
-        # Main Waveform (Fill)
         fig.add_trace(go.Scatter(x=x, y=y, fill='tozeroy', line=dict(color='#22d3ee', width=1), name='Energy'))
-        # Mirror for "Stereo" look
         fig.add_trace(go.Scatter(x=x, y=-y, fill='tozeroy', line=dict(color='#818cf8', width=1), name='Stereo'))
         
-        # Section Markers
         for i, sec in enumerate(d['sections']):
-            sec_x = (sec / (len(y)*512/22050)) * 100 # Approx scaling
+            sec_x = (sec / (len(y)*512/22050)) * 100 
             if sec_x > 100: break
             fig.add_vline(x=sec_x, line_width=1, line_dash="dot", line_color="rgba(255,255,255,0.3)")
             fig.add_annotation(x=sec_x, y=0.8, text=f"SEC {i+1}", showarrow=False, font=dict(color="#ec4899", size=10))
@@ -363,14 +358,12 @@ def main():
             showlegend=False, hovermode="x unified"
         )
         
-        # Containerize Plotly
         st.markdown('<div class="viz-container">', unsafe_allow_html=True)
         st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
         st.markdown('</div>', unsafe_allow_html=True)
 
         st.markdown("<br>", unsafe_allow_html=True)
 
-        # PROMPT & LYRICS
         c3, c4 = st.columns([1.5, 1])
         with c3:
             st.markdown(f'<div class="glass-panel"><div class="panel-title">🎹 SUNO PROMPT</div><div class="code-block">{ai.get("suno_prompt","...")}</div></div>', unsafe_allow_html=True)
@@ -378,7 +371,6 @@ def main():
             tips = "".join([f"<li style='margin-bottom:8px; color:#94a3b8'>{t}</li>" for t in ai.get("tips",[])])
             st.markdown(f'<div class="glass-panel"><div class="panel-title">💡 TIPS</div><ul>{tips}</ul></div>', unsafe_allow_html=True)
 
-        # LYRIC TAGGER
         st.markdown('<div class="glass-panel" style="border-color:#4f46e5">', unsafe_allow_html=True)
         st.markdown('<div class="panel-title">📝 LYRIC TAGGER</div>', unsafe_allow_html=True)
         l1, l2 = st.columns(2)
