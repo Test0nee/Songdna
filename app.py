@@ -148,8 +148,13 @@ async def fetch_artist_image(artist):
 # --- LIBROSA AUDIO ANALYSIS ENGINE ---
 def extract_audio_features(file_path):
     """
-    Examine the raw audio and extract tempo, key, timbre, and energy.
-    Works even for completely unknown / custom Suno songs.
+    Examine the raw audio and extract:
+    - Tempo (BPM)
+    - Key
+    - Timbre (brightness)
+    - Energy
+    - Simple vocal presence heuristic
+    - Style hint based on harmonic/percussive balance
     """
     try:
         # Load audio (first 60 seconds for speed)
@@ -159,7 +164,7 @@ def extract_audio_features(file_path):
         tempo, _ = librosa.beat.beat_track(y=y, sr=sr)
         bpm = round(float(tempo))
 
-        # 2. KEY DETECTION (Simple Chromagram correlation)
+        # 2. KEY DETECTION (simple rough estimate)
         chroma = librosa.feature.chroma_cqt(y=y, sr=sr)
         chroma_vals = np.sum(chroma, axis=1)
         pitches = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']
@@ -186,19 +191,40 @@ def extract_audio_features(file_path):
         else:
             intensity = "Low / Chill"
 
-        # 5. Simple percussive vs harmonic estimate (very rough)
+        # 5. Harmonic / Percussive separation
         harmonic, percussive = librosa.effects.hpss(y)
-        perc_level = float(np.mean(np.abs(percussive)))
-        harm_level = float(np.mean(np.abs(harmonic)))
-        perc_ratio = perc_level / (harm_level + 1e-9)
 
-        # Heuristic style tag hint, used only as a clue for Gemini
-        if perc_ratio > 1.2 and intensity != "Low / Chill":
-            style_hint = "Band style with drums and rhythm section, possibly rock or pop with clear percussion"
-        elif intensity == "Low / Chill" and brightness.startswith("Dark"):
-            style_hint = "Lo-fi, ambient or chill ballad style, soft and relaxed"
+        # 6. Simple vocal presence heuristic
+        #    Look at harmonic content in the speech band (300–3400 Hz)
+        S = np.abs(librosa.stft(harmonic, n_fft=2048, hop_length=512))
+        freqs = librosa.fft_frequencies(sr=sr, n_fft=2048)
+        voice_band = (freqs >= 300) & (freqs <= 3400)
+
+        if np.any(voice_band):
+            voice_energy = float(np.mean(S[voice_band]))
+            non_voice_energy = float(np.mean(S[~voice_band])) + 1e-9
+            voice_ratio = voice_energy / non_voice_energy
         else:
-            style_hint = "Modern production with mixed electronic and acoustic elements"
+            voice_ratio = 1.0
+
+        if voice_ratio > 1.15 and intensity != "Low / Chill":
+            vocals_flag = "Likely Vocals"
+        elif voice_ratio < 1.05 and intensity == "Low / Chill":
+            vocals_flag = "Probably Instrumental / Background"
+        else:
+            vocals_flag = "Unclear, mixed or subtle vocals"
+
+        # 7. Percussive vs harmonic energy hint
+        perc_level = float(np.mean(np.abs(percussive)))
+        harm_level = float(np.mean(np.abs(harmonic))) + 1e-9
+        perc_ratio = perc_level / harm_level
+
+        if perc_ratio > 1.2 and intensity != "Low / Chill":
+            style_hint = "Band style with drums and rhythm section, possibly rock or pop with clear percussion."
+        elif intensity == "Low / Chill" and brightness.startswith("Dark"):
+            style_hint = "Lo-fi, ambient or chill ballad style, soft and relaxed."
+        else:
+            style_hint = "Modern production with a mix of electronic and acoustic elements."
 
         return {
             "success": True,
@@ -206,7 +232,9 @@ def extract_audio_features(file_path):
             "key": key,
             "timbre": brightness,
             "energy": intensity,
-            "style_hint": style_hint
+            "style_hint": style_hint,
+            "vocals": vocals_flag,
+            "voice_ratio": round(voice_ratio, 2)
         }
     except Exception as e:
         return {"success": False, "error": str(e)}
@@ -259,13 +287,19 @@ You only know these audio features:
 - Timbre: {song_data.get('timbre')}
 - Energy: {song_data.get('energy')}
 - Style hint: {song_data.get('style_hint', '')}
+- Vocal presence heuristic: {song_data.get('vocals', 'Unknown')} (voice band ratio {song_data.get('voice_ratio', 0)})
 
-Based on this, infer:
+Use the vocal heuristic as a strong hint:
+- If it says "Likely Vocals", assume there are clear vocals.
+- If it says "Probably Instrumental / Background", assume the track can be treated as instrumental with no lead vocal.
+- If "Unclear", you can choose either light vocals or instrumental.
+
+Based on all this, infer:
 
 1. A single-word primary mood (for example: "energetic", "melancholic", "dreamy", "cinematic").
 2. A concise genre (for example: "indie rock", "acoustic ballad", "lofi hip hop", "EDM house", "rock with guitar and drums").
 3. A short list of likely main instruments (for example: ["electric guitar", "drums", "bass", "synths"]).
-4. Vocal type and style. If the track is likely instrumental, say "instrumental, no vocals".
+4. Vocal type and style. If the heuristics suggest instrumental, set vocal_type to "instrumental" and vocal_style to "no lead vocal, instrumental track".
 5. A compact Suno-style prompt (1–2 sentences) describing the style, tempo, key, mood, energy and instrumentation. This should be something the user can paste into Suno as a style reference.
 6. 2–3 very short tips for recreating this vibe in AI music tools.
 
@@ -336,8 +370,8 @@ Return ONLY valid JSON in this exact structure:
             "key": song_data.get("key", ""),
             "genre": song_data.get("genre", "Unknown"),
             "instruments": [],
-            "vocal_type": "Unknown",
-            "vocal_style": "",
+            "vocal_type": "instrumental" if song_data.get("vocals", "").startswith("Probably Instrumental") else "Unknown",
+            "vocal_style": "" if song_data.get("vocals", "").startswith("Probably Instrumental") else "",
             "suno_prompt": f"{song_data.get('genre', 'Unknown')} track at {song_data.get('bpm', '')} with {song_data.get('energy', '')} energy, suitable as a reference style.",
             "tips": []
         }
@@ -435,6 +469,8 @@ def main():
                         "timbre": audio_stats["timbre"],
                         "energy": audio_stats["energy"],
                         "style_hint": audio_stats["style_hint"],
+                        "vocals": audio_stats["vocals"],
+                        "voice_ratio": audio_stats["voice_ratio"],
                     }
                 else:
                     # Fallback to deep scan only (this is where Suno songs land)
@@ -451,6 +487,8 @@ def main():
                         "timbre": audio_stats["timbre"],
                         "energy": audio_stats["energy"],
                         "style_hint": audio_stats["style_hint"],
+                        "vocals": audio_stats["vocals"],
+                        "voice_ratio": audio_stats["voice_ratio"],
                     }
 
                 # 3. Fetch visuals
@@ -513,6 +551,10 @@ def main():
                         <div class="stat-box">
                             <div class="stat-label">ENERGY</div>
                             <div class="stat-value">{data.get('energy', 'N/A')}</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-label">VOCALS</div>
+                            <div class="stat-value">{data.get('vocals', 'Unknown')}</div>
                         </div>
                     </div>
                     <div style="margin-top:10px; font-size:0.75rem; color:#94a3b8;">
