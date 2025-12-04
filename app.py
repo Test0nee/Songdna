@@ -184,7 +184,7 @@ def extract_dominant_color(image_url):
     except:
         return (56, 189, 248)
 
-# --- 5. AUDIO ENGINE ---
+# --- 5. AUDIO ENGINE (ADVANCED STRUCTURE DETECTION) ---
 def safe_load_audio(file_path):
     errors = []
     try:
@@ -225,23 +225,46 @@ def extract_audio_features(file_path):
     viz_rms = librosa.feature.rms(y=y, hop_length=hop)[0]
     viz_rms = viz_rms / (np.max(viz_rms) + 1e-9) 
     
+    # --- STRUCTURE SEGMENTATION ---
+    segments = []
     try:
+        # Detect major changes in energy/timbre
         onset_env = librosa.onset.onset_strength(y=y, sr=sr)
-        peaks = librosa.util.peak_pick(onset_env, pre_max=3, post_max=3, pre_avg=3, post_avg=5, delta=0.5, wait=10)
-        section_times = librosa.frames_to_time(peaks, sr=sr)
-    except: section_times = []
-    
-    filtered_sections = []
-    last = 0
-    for t in section_times:
-        if t - last > 15:
-            filtered_sections.append(t)
-            last = t
+        # Using specific params to find major section changes (not just beats)
+        peaks = librosa.util.peak_pick(onset_env, pre_max=20, post_max=20, pre_avg=20, post_avg=20, delta=0.5, wait=100)
+        times = librosa.frames_to_time(peaks, sr=sr)
+        
+        # Calculate energy for each segment to help label it
+        start_t = 0
+        for t in times:
+            if t - start_t > 10: # Minimum section length 10s
+                # Extract segment audio
+                start_sample = int(start_t * sr)
+                end_sample = int(t * sr)
+                seg_rms = np.mean(librosa.feature.rms(y=y[start_sample:end_sample])[0])
+                
+                segments.append({
+                    "start": round(start_t, 1),
+                    "end": round(t, 1),
+                    "energy": round(float(seg_rms), 3)
+                })
+                start_t = t
+        
+        # Append final segment
+        segments.append({
+            "start": round(start_t, 1),
+            "end": round(duration, 1),
+            "energy": round(float(np.mean(librosa.feature.rms(y=y[int(start_t*sr):])[0])), 3)
+        })
+        
+    except: 
+        segments = [{"start": 0, "end": duration, "energy": 0}]
 
     return {
         "success": True, "bpm": bpm, "key": key, "energy": energy,
         "duration": f"{int(duration//60)}:{int(duration%60):02d}",
-        "waveform": viz_rms.tolist(), "sections": filtered_sections
+        "waveform": viz_rms.tolist(), 
+        "segments": segments # Rich metadata for AI to label
     }
 
 async def identify_song(file_path):
@@ -259,35 +282,43 @@ async def identify_song(file_path):
     except: pass
     return {"found": False}
 
-# --- AI BRAIN (WITH INTENT MODIFIER) ---
+# --- AI BRAIN (WITH STRUCTURE & INTENT) ---
 def analyze_gemini(data, intent="Original Style (Analysis)"):
     if not api_key: return None
     model = genai.GenerativeModel("gemini-2.5-flash")
+    
+    # Create a string representation of the segments for the AI
+    seg_str = ", ".join([f"Sec {i+1}: {s['end']-s['start']}s (Energy: {s['energy']})" for i,s in enumerate(data.get('segments',[]))])
     
     prompt = f"""
     Act as a Music Producer.
     
     SOURCE AUDIO DNA:
     - Song: {data.get('title','Unknown')} by {data.get('artist','Unknown')}
-    - BPM: {data.get('bpm')}
-    - Key: {data.get('key')}
-    - Energy: {data.get('energy')}
+    - BPM: {data.get('bpm')} | Key: {data.get('key')} | Energy: {data.get('energy')}
+    - RAW STRUCTURE SEGMENTS: {seg_str}
     
     USER INTENT (MODIFIER): "{intent}"
     
-    TASK:
-    Create a Suno v3 Prompt based on the Source Audio but MODIFIED by the User Intent.
-    If Intent is 'Original', just describe the song accurately.
-    If Intent is different (e.g. 'Make it 80s'), MORPH the prompt (e.g. change BPM, instruments) to fit the new vibe while keeping the song's soul.
+    TASK 1: INFER STRUCTURE
+    Look at the raw segments. Low energy usually means Intro/Verse/Bridge. High energy means Chorus/Drop.
+    Map the raw segments to song sections (Intro, Verse, Chorus, etc).
+    
+    TASK 2: CREATE PROMPT
+    Create a Suno v3 Prompt based on Source + Intent.
     
     OUTPUT JSON:
     {{
         "mood": "Modified Mood",
         "genre": "Modified Genre",
         "instruments": ["Inst1", "Inst2"],
+        "structure_map": [
+            {{"label": "Intro", "start": 0, "color": "#a855f7"}}, 
+            {{"label": "Verse", "start": 15, "color": "#3b82f6"}},
+            {{"label": "Chorus", "start": 45, "color": "#ec4899"}}
+        ],
         "vocal_type": "Vocal Style",
-        "vocal_style": "Processing details",
-        "suno_prompt": "The final prompt ready for Suno",
+        "suno_prompt": "The final prompt ready for Suno (include structure tags)",
         "tips": ["Tip 1", "Tip 2"]
     }}
     """
@@ -326,12 +357,11 @@ def main():
                 full_data = {**stats, **(meta if meta['found'] else {"title":"Unknown","artist":"Deep Scan","img":None,"genre":"Unknown"})}
                 full_data['artist_bg'] = run_async(fetch_artist_image(full_data['artist']))
                 
-                # Extract Color
                 img_url = full_data.get('img') or full_data.get('artist_bg')
                 full_data['color_rgb'] = extract_dominant_color(img_url)
 
                 st.session_state.data = full_data
-                st.session_state.ai = analyze_gemini(full_data) # Initial Analysis
+                st.session_state.ai = analyze_gemini(full_data) 
                 os.remove(tmp_path)
                 st.rerun()
 
@@ -353,7 +383,7 @@ def main():
             </style>
         """, unsafe_allow_html=True)
 
-        # --- HERO BANNER ---
+        # --- HERO ---
         img_url = d.get('img') or d.get('artist_bg') or "https://images.unsplash.com/photo-1470225620780-dba8ba36b745"
         
         st.markdown(f"""
@@ -401,8 +431,8 @@ def main():
                 </div>
             """, unsafe_allow_html=True)
 
-        # DAW VISUALIZER
-        st.markdown('<div class="panel-title" style="margin-left:5px">📈 STRUCTURAL DYNAMICS</div>', unsafe_allow_html=True)
+        # --- ADVANCED STRUCTURAL VISUALIZER ---
+        st.markdown('<div class="panel-title" style="margin-left:5px">📈 STRUCTURAL ANALYSIS</div>', unsafe_allow_html=True)
         
         y = np.array(d['waveform'])
         x = np.linspace(0, 100, len(y))
@@ -411,11 +441,29 @@ def main():
         fig.add_trace(go.Scatter(x=x, y=y, fill='tozeroy', line=dict(color='#22d3ee', width=1), name='Energy'))
         fig.add_trace(go.Scatter(x=x, y=-y, fill='tozeroy', line=dict(color='#818cf8', width=1), name='Stereo'))
         
-        for i, sec in enumerate(d['sections']):
-            sec_x = (sec / (len(y)*512/22050)) * 100 
-            if sec_x > 100: break
-            fig.add_vline(x=sec_x, line_width=1, line_dash="dot", line_color="rgba(255,255,255,0.3)")
-            fig.add_annotation(x=sec_x, y=0.8, text=f"SEC {i+1}", showarrow=False, font=dict(color="#ec4899", size=10))
+        # DRAW LABELED SECTIONS (From AI Inference)
+        structure_map = ai.get('structure_map', [])
+        total_dur = d.get('segments', [{}])[-1].get('end', 180) # Estimated total duration
+        
+        for sec in structure_map:
+            # Convert start time to % X-axis
+            start_x = (sec['start'] / total_dur) * 100
+            
+            # Draw Region Line
+            fig.add_vline(x=start_x, line_width=1, line_dash="solid", line_color="rgba(255,255,255,0.2)")
+            
+            # Draw Label Tag
+            fig.add_annotation(
+                x=start_x + 2, y=0.9, 
+                text=sec['label'], 
+                showarrow=False, 
+                xanchor="left",
+                bgcolor=sec.get('color', '#333'),
+                bordercolor="#fff",
+                borderwidth=1,
+                borderpad=4,
+                font=dict(color="white", size=10)
+            )
 
         fig.update_layout(
             height=200, margin=dict(l=0,r=0,t=20,b=0),
@@ -431,14 +479,14 @@ def main():
 
         st.markdown("<br>", unsafe_allow_html=True)
 
-        # --- STYLE REMIX STATION (NEW) ---
-        st.markdown('<div class="panel-title">🎛️ STYLE REMIXER (MODIFY INTENT)</div>', unsafe_allow_html=True)
+        # --- STYLE REMIX STATION ---
+        st.markdown('<div class="panel-title">🎛️ STYLE REMIXER</div>', unsafe_allow_html=True)
         st.markdown('<div class="remix-box">', unsafe_allow_html=True)
         
         rc1, rc2 = st.columns([1, 2])
         with rc1:
             intent_preset = st.selectbox(
-                "Choose Vibe Preset", 
+                "Choose Vibe Modifier", 
                 ["Original Analysis", "More Energetic", "Darker / Moody", "Cinematic / Epic", "80s Retro", "Acoustic / Stripped", "Lofi / Chill", "Heavy / Aggressive"]
             )
         with rc2:
