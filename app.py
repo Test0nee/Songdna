@@ -9,8 +9,9 @@ import json
 import pandas as pd
 import numpy as np
 import librosa
+import plotly.graph_objects as go
 
-# --- OPTIONAL: SPOTIFY (for artist fallback images) ---
+# ---------- SPOTIFY AUTH ----------
 SPOTIFY_CLIENT_ID = st.secrets.get("SPOTIFY_CLIENT_ID")
 SPOTIFY_CLIENT_SECRET = st.secrets.get("SPOTIFY_CLIENT_SECRET")
 
@@ -27,7 +28,7 @@ def get_spotify_token():
         return None
 
 
-# --- 1. CONFIGURATION ---
+# ---------- 1. CONFIGURATION ----------
 st.set_page_config(
     page_title="SunoSonic Studio",
     page_icon="🎵",
@@ -35,7 +36,7 @@ st.set_page_config(
     initial_sidebar_state="collapsed",
 )
 
-# --- 2. ULTRA-MODERN UI (CSS) ---
+# ---------- 2. ULTRA MODERN UI (CSS) ----------
 st.markdown(
     """
     <style>
@@ -104,86 +105,80 @@ st.markdown(
         margin: 10px 0 24px 0;
     }
 
-    /* HERO WRAPPER – BIGGER CARD */
+    /* HERO SECTION */
     .hero-wrapper {
         position: relative;
-        border-radius: 32px;
+        border-radius: 28px;
         overflow: hidden;
-        /* 20% wider than content by using negative margins */
-        margin: 0 -10%;
-        margin-top: 6px;
-        margin-bottom: 32px;
-        height: 420px; /* ~30% taller than before */
-        box-shadow: 0 32px 80px -40px rgba(15,23,42,0.9);
-        border: 1px solid rgba(148,163,184,0.35);
+        margin-bottom: 25px;
+        box-shadow: 0 28px 80px -40px rgba(15,23,42,0.9);
+        border: 1px solid rgba(148,163,184,0.3);
+        height: 420px; /* taller hero */
+        width: calc(100% + 120px); /* wider than content */
+        margin-left: -60px;
+        background: radial-gradient(circle at 0% 0%, #1e293b, #020617);
     }
-
-    /* Blurred background using album cover */
-    .hero-bg-blur {
-        position: absolute;
-        inset: -24px;
-        background-size: cover;
-        background-position: center;
-        filter: blur(34px) saturate(1.5);
-        transform: scale(1.15);
-        opacity: 0.9;
-    }
-
-    /* Dark gradient overlay like Spotify */
-    .hero-bg-overlay {
+    .hero-bg { 
         position: absolute;
         inset: 0;
+        width: 100%; 
+        height: 100%; 
+        object-fit: cover; 
+        transform: scale(1.15); /* zoom to hide square feel */
+        filter: blur(24px) saturate(1.25) brightness(0.7);
+        transform-origin: center;
+    }
+    .hero-overlay {
+        position: absolute; 
+        inset: 0;
         background:
-            radial-gradient(circle at 0% 0%, rgba(59,130,246,0.35), transparent 55%),
-            radial-gradient(circle at 100% 0%, rgba(236,72,153,0.35), transparent 55%),
-            linear-gradient(90deg, rgba(15,23,42,0.96) 0%, rgba(15,23,42,0.78) 45%, rgba(15,23,42,0.85) 100%);
-        mix-blend-mode: multiply;
+            linear-gradient(to right, rgba(15,23,42,0.96) 0%, rgba(15,23,42,0.88) 40%, rgba(15,23,42,0.45) 68%, rgba(15,23,42,0.0) 100%),
+            radial-gradient(circle at 0% 0%, rgba(59,130,246,0.25), transparent 55%),
+            radial-gradient(circle at 100% 0%, rgba(236,72,153,0.25), transparent 55%);
+        display: flex; 
+        align-items: center; 
+        padding: 30px 46px;
     }
 
     .hero-inner {
-        position: relative;
-        z-index: 2;
         display: flex;
         align-items: center;
         justify-content: space-between;
-        height: 100%;
-        padding: 32px 56px;
-        gap: 32px;
+        width: 100%;
+        gap: 28px;
     }
 
-    /* LEFT – COVER */
-    .hero-cover-wrap {
-        flex: 0 0 230px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
+    .hero-meta {
+        max-width: 65%;
     }
-    .hero-cover {
-        width: 230px;
-        height: 230px;
-        border-radius: 26px;
+
+    .hero-cover-wrap {
+        width: 180px;
+        height: 180px;
+        border-radius: 24px;
+        padding: 6px;
+        background: radial-gradient(circle at 0% 0%, rgba(56,189,248,0.4), rgba(236,72,153,0.2));
+        box-shadow: 0 20px 40px rgba(15,23,42,0.95);
+        border: 1px solid rgba(148,163,184,0.5);
+    }
+    .hero-cover-inner {
+        width: 100%;
+        height: 100%;
+        border-radius: 18px;
         overflow: hidden;
-        box-shadow: 0 22px 60px rgba(15,23,42,0.95);
-        border: 1px solid rgba(148,163,184,0.35);
         background: #020617;
     }
-    .hero-cover img {
+    .hero-cover-inner img {
         width: 100%;
         height: 100%;
         object-fit: cover;
         display: block;
     }
 
-    /* CENTER – TEXT */
-    .hero-meta {
-        flex: 1 1 auto;
-        min-width: 0;
-    }
-
     .verified-badge {
-        background: rgba(37,99,235,0.18); 
+        background: rgba(37, 99, 235, 0.18); 
         color: #bfdbfe;
-        border: 1px solid rgba(59,130,246,0.65); 
+        border: 1px solid rgba(59, 130, 246, 0.65); 
         padding: 6px 12px;
         border-radius: 100px; 
         font-size: 0.75rem; 
@@ -205,7 +200,7 @@ st.markdown(
         font-size: 3.1rem; 
         font-weight: 900; 
         line-height: 0.95; 
-        margin: 12px 0 4px 0; 
+        margin: 10px 0 4px 0; 
         letter-spacing: -2px; 
         background: linear-gradient(to right, #ffffff, #e5e7eb); 
         -webkit-background-clip: text; 
@@ -239,17 +234,14 @@ st.markdown(
         font-size: 0.9rem;
     }
 
-    /* RIGHT – PLAY */
     .hero-play-wrap {
-        flex: 0 0 auto;
         display: flex;
-        flex-direction: column;
         align-items: center;
-        gap: 10px;
+        gap: 14px;
     }
     .hero-play-btn {
-        width: 66px;
-        height: 66px;
+        width: 60px;
+        height: 60px;
         border-radius: 999px;
         background: radial-gradient(circle at 30% 0%, #22c55e, #16a34a);
         display: flex;
@@ -262,14 +254,14 @@ st.markdown(
         margin-left: 3px;
         width: 0;
         height: 0;
-        border-top: 10px solid transparent;
-        border-bottom: 10px solid transparent;
-        border-left: 16px solid #052e16;
+        border-top: 9px solid transparent;
+        border-bottom: 9px solid transparent;
+        border-left: 14px solid #052e16;
     }
     .hero-duration {
         font-size: 0.8rem;
         color: #e5e7eb;
-        opacity: 0.85;
+        opacity: 0.8;
     }
 
     /* GLASS PANELS */
@@ -384,7 +376,7 @@ st.markdown(
         overflow-y: auto; 
     }
 
-    /* MODERNIZE STREAMLIT AUDIO PLAYER */
+    /* MODERN STREAMLIT AUDIO PLAYER */
     [data-testid="stAudio"] > div {
         background: #020617;
         border-radius: 999px;
@@ -412,12 +404,156 @@ st.markdown(
         padding: 60px; 
         text-align: center; 
     }
+
+    /* STRUCTURAL DYNAMICS PANEL */
+    .viz-panel {
+        background: #020617;
+        border-radius: 24px;
+        border: 1px solid #1f2937;
+        padding: 22px 22px 18px 22px;
+        margin-top: 10px;
+        box-shadow: 0 24px 60px rgba(15,23,42,0.85);
+        position: relative;
+        overflow: hidden;
+    }
+    .viz-panel::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background:
+            radial-gradient(circle at 0% 0%, rgba(56,189,248,0.15), transparent 55%),
+            radial-gradient(circle at 100% 0%, rgba(236,72,153,0.15), transparent 55%);
+        opacity: 0.7;
+        pointer-events: none;
+    }
+    .viz-inner {
+        position: relative;
+        z-index: 1;
+    }
+    .viz-header-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 12px;
+    }
+    .viz-title-wrap {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    .viz-icon {
+        width: 32px;
+        height: 32px;
+        border-radius: 12px;
+        background: radial-gradient(circle at 0% 0%, #22d3ee, #6366f1);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 0 20px rgba(59,130,246,0.8);
+        border: 1px solid rgba(15,23,42,0.9);
+    }
+    .viz-icon span {
+        font-size: 16px;
+    }
+    .viz-title {
+        font-size: 0.95rem;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        color: #e5e7eb;
+        font-weight: 600;
+    }
+    .viz-header-line {
+        height: 2px;
+        background: linear-gradient(90deg, #22d3ee, #6366f1, #ec4899);
+        border-radius: 999px;
+        opacity: 0.9;
+        margin-bottom: 14px;
+    }
+    .viz-chart-frame {
+        border-radius: 18px;
+        background: radial-gradient(circle at 0% 0%, rgba(15,23,42,0.5), rgba(15,23,42,0.95));
+        padding: 10px 10px 4px 10px;
+        border: 1px solid rgba(31,41,55,1);
+    }
+    .viz-footer {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-top: 10px;
+        font-size: 0.8rem;
+        color: #9ca3af;
+        gap: 10px;
+        flex-wrap: wrap;
+    }
+    .viz-toggles {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    .pill-toggle {
+        padding: 4px 12px;
+        border-radius: 999px;
+        border: 1px solid #1f2937;
+        background: #020617;
+        color: #9ca3af;
+        font-size: 0.75rem;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+    }
+    .pill-toggle-dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 999px;
+        background: #4b5563;
+    }
+    .pill-toggle.active {
+        color: #e5e7eb;
+        border-color: rgba(148,163,184,0.9);
+        background: radial-gradient(circle at 0% 0%, rgba(56,189,248,0.18), rgba(15,23,42,1));
+    }
+    .pill-toggle.active .pill-toggle-dot.l {
+        background: #22d3ee;
+        box-shadow: 0 0 10px rgba(34,211,238,0.9);
+    }
+    .pill-toggle.active .pill-toggle-dot.r {
+        background: #6366f1;
+        box-shadow: 0 0 10px rgba(99,102,241,0.9);
+    }
+    .pill-toggle.active .pill-toggle-dot.rms {
+        background: #ec4899;
+        box-shadow: 0 0 10px rgba(236,72,153,0.9);
+    }
+    .viz-buttons {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    .viz-btn {
+        padding: 5px 12px;
+        border-radius: 999px;
+        border: 1px solid #1f2937;
+        background: #020617;
+        color: #e5e7eb;
+        font-size: 0.75rem;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        cursor: default;
+    }
+    .viz-btn.primary {
+        border-color: rgba(148,163,184,0.9);
+        background: radial-gradient(circle at 0% 0%, rgba(56,189,248,0.18), rgba(15,23,42,1));
+    }
+    .viz-btn span.icon {
+        font-size: 0.8rem;
+    }
     </style>
     """,
     unsafe_allow_html=True,
 )
 
-# --- 3. KNOWLEDGE BASE ---
+# ---------- 3. KNOWLEDGE BASE ----------
 SUNO_TAGS = {
     "Structure": [
         "[Intro]",
@@ -467,8 +603,7 @@ SUNO_TAGS = {
     ],
 }
 
-# --- 4. LOGIC & HELPERS ---
-
+# ---------- 4. LOGIC AND HELPERS ----------
 api_key = st.secrets.get("GEMINI_API_KEY")
 if api_key:
     genai.configure(api_key=api_key)
@@ -485,8 +620,8 @@ def run_async(coroutine):
 
 async def fetch_artist_image(artist):
     """
-    Optional Spotify artist image for future use.
-    Currently hero uses album cover, so this is mostly fallback.
+    Get a wide artist or cover image.
+    First try Spotify artist, then Deezer, finally fallback to Unsplash.
     """
     if not artist:
         return "https://images.unsplash.com/photo-1514525253440-b393452e8d26?w=1600"
@@ -520,7 +655,6 @@ async def fetch_artist_image(artist):
     return "https://images.unsplash.com/photo-1514525253440-b393452e8d26?w=1600"
 
 
-# --- LIBROSA AUDIO ANALYSIS ENGINE ---
 def extract_audio_features(file_path):
     try:
         y, sr = librosa.load(file_path, sr=None)
@@ -557,6 +691,7 @@ def extract_audio_features(file_path):
             intensity = "Low / Chill"
 
         harmonic, percussive = librosa.effects.hpss(y)
+
         S = np.abs(librosa.stft(harmonic, n_fft=2048, hop_length=512))
         freqs = librosa.fft_frequencies(sr=sr, n_fft=2048)
         voice_band = (freqs >= 300) & (freqs <= 3400)
@@ -738,7 +873,7 @@ LYRICS:
         return f"Error: {e}"
 
 
-# --- 5. MAIN APPLICATION ---
+# ---------- 5. MAIN APPLICATION ----------
 def main():
     if "song_data" not in st.session_state:
         st.session_state.song_data = None
@@ -763,7 +898,7 @@ def main():
         unsafe_allow_html=True,
     )
 
-    # --- STATE 1: UPLOAD ---
+    # STATE 1: UPLOAD
     if not st.session_state.song_data:
         st.markdown(
             '<div class="top-action"><span style="font-size:0.8rem; letter-spacing:0.18em; text-transform:uppercase; color:#9ca3af;">Upload a track to begin analysis</span></div>',
@@ -827,7 +962,6 @@ def main():
                         "duration": audio_stats["duration"],
                     }
 
-                # Optional artist image fetch (not used directly in hero for now)
                 result["artist_bg"] = run_async(fetch_artist_image(result["artist"]))
 
                 st.session_state.song_data = result
@@ -835,12 +969,11 @@ def main():
                 os.remove(tmp_path)
                 st.rerun()
 
-    # --- STATE 2: DASHBOARD ---
+    # STATE 2: DASHBOARD
     else:
         data = st.session_state.song_data
         ai = st.session_state.analysis or {}
 
-        # Top "Analyze new track" action
         cols = st.columns([1, 1, 1])
         with cols[1]:
             if st.button("← ANALYZE NEW TRACK", use_container_width=True):
@@ -850,44 +983,38 @@ def main():
                 st.session_state.uploaded_bytes = None
                 st.rerun()
 
-        # HERO CARD – Spotify-like: square cover + blurred full-width background
-        cover_url = data.get(
-            "album_art",
-            data.get(
-                "artist_bg",
-                "https://images.unsplash.com/photo-1511379938547-c1f69419868d?w=1600",
-            ),
-        )
-        bg_url = cover_url
+        hero_bg = data.get("artist_bg") or "https://images.unsplash.com/photo-1511379938547-c1f69419868d?w=1600"
+        cover_img = data.get("album_art") or hero_bg
 
         st.markdown(
             f"""
             <div class="hero-wrapper">
-                <div class="hero-bg-blur" style="background-image:url('{bg_url}');"></div>
-                <div class="hero-bg-overlay"></div>
-                <div class="hero-inner">
-                    <div class="hero-cover-wrap">
-                        <div class="hero-cover">
-                            <img src="{cover_url}" alt="Album cover">
+                <img src="{hero_bg}" class="hero-bg">
+                <div class="hero-overlay">
+                    <div class="hero-inner">
+                        <div class="hero-cover-wrap">
+                            <div class="hero-cover-inner">
+                                <img src="{cover_img}">
+                            </div>
                         </div>
-                    </div>
-                    <div class="hero-meta">
-                        <div class="verified-badge">
-                            <span class="verified-dot"></span>
-                            <span>{data['source'].upper()} ANALYSIS</span>
+                        <div class="hero-meta">
+                            <div class="verified-badge">
+                                <span class="verified-dot"></span>
+                                <span>{data['source'].upper()} ANALYSIS</span>
+                            </div>
+                            <div class="artist-title">{data['artist']}</div>
+                            <div class="song-subtitle">{data['title']}</div>
+                            <div class="meta-tags">
+                                <span class="meta-pill"><span class="icon">🎵</span>{ai.get('genre', data.get('genre', 'Unknown'))}</span>
+                                <span class="meta-pill"><span class="icon">⏱</span>{ai.get('tempo', data.get('bpm', '--'))}</span>
+                                <span class="meta-pill"><span class="icon">🎹</span>{ai.get('key', data.get('key', '--'))}</span>
+                                <span class="meta-pill"><span class="icon">⏰</span>{data.get('duration', '--:--')}</span>
+                            </div>
                         </div>
-                        <div class="artist-title">{data['artist']}</div>
-                        <div class="song-subtitle">{data['title']}</div>
-                        <div class="meta-tags">
-                            <span class="meta-pill"><span class="icon">🎵</span>{ai.get('genre', data.get('genre', 'Unknown'))}</span>
-                            <span class="meta-pill"><span class="icon">⏱</span>{ai.get('tempo', data.get('bpm', '--'))}</span>
-                            <span class="meta-pill"><span class="icon">🎹</span>{ai.get('key', data.get('key', '--'))}</span>
-                            <span class="meta-pill"><span class="icon">⏰</span>{data.get('duration', '--:--')}</span>
+                        <div class="hero-play-wrap">
+                            <div class="hero-play-btn"><span></span></div>
+                            <div class="hero-duration">{data.get('duration', '--:--')}</div>
                         </div>
-                    </div>
-                    <div class="hero-play-wrap">
-                        <div class="hero-play-btn"><span></span></div>
-                        <div class="hero-duration">{data.get('duration', '--:--')}</div>
                     </div>
                 </div>
             </div>
@@ -895,13 +1022,11 @@ def main():
             unsafe_allow_html=True,
         )
 
-        # AUDIO PLAYER
         if st.session_state.get("uploaded_bytes"):
             st.audio(st.session_state.uploaded_bytes, format="audio/mp3")
 
         st.markdown("<br>", unsafe_allow_html=True)
 
-        # ANALYSIS GRID
         col1, col2 = st.columns(2)
         with col1:
             instruments_html = "".join(
@@ -955,21 +1080,101 @@ def main():
                 unsafe_allow_html=True,
             )
 
-        # VISUALIZER
+        # VISUALIZER MODERN PANEL
         st.markdown("<br>", unsafe_allow_html=True)
+
+        spikiness = 2.0 if "High" in data.get("energy", "") else 0.6
+        chart_data = pd.DataFrame(
+            np.random.randn(240, 3) * spikiness,
+            columns=["L", "R", "RMS"],
+        )
+
+        fig = go.Figure()
+        colors = {"L": "#22d3ee", "R": "#6366f1", "RMS": "#ec4899"}
+
+        for ch in ["L", "R", "RMS"]:
+            fig.add_trace(
+                go.Scatter(
+                    x=list(range(len(chart_data))),
+                    y=chart_data[ch],
+                    mode="lines",
+                    name=ch,
+                    line=dict(color=colors[ch], width=2.5),
+                    hoverinfo="skip",
+                )
+            )
+
+        fig.update_layout(
+            margin=dict(l=0, r=0, t=0, b=0),
+            paper_bgcolor="rgba(0,0,0,0)",
+            plot_bgcolor="rgba(0,0,0,0)",
+            showlegend=False,
+            xaxis=dict(
+                showgrid=False,
+                showline=False,
+                zeroline=False,
+                showticklabels=False,
+            ),
+            yaxis=dict(
+                showgrid=True,
+                gridcolor="rgba(148,163,184,0.2)",
+                zeroline=False,
+                showticklabels=False,
+            ),
+        )
+
         st.markdown(
-            '<div class="glass-panel" style="border-top: 1px solid rgba(129,140,248,0.35);"><div class="panel-header">🎼 STRUCTURAL DYNAMICS & RMS (SIMULATED)</div></div>',
+            """
+            <div class="viz-panel">
+              <div class="viz-inner">
+                <div class="viz-header-row">
+                    <div class="viz-title-wrap">
+                        <div class="viz-icon"><span>📈</span></div>
+                        <div class="viz-title">STRUCTURAL DYNAMICS & RMS (SIMULATED)</div>
+                    </div>
+                </div>
+                <div class="viz-header-line"></div>
+                <div class="viz-chart-frame">
+            """,
             unsafe_allow_html=True,
         )
-        spikiness = 2.0 if "High" in data.get("energy", "") else 0.5
-        chart_data = pd.DataFrame(
-            np.random.randn(80, 3) * spikiness, columns=["L", "R", "RMS"]
-        )
-        st.area_chart(chart_data, height=120)
 
+        st.plotly_chart(
+            fig,
+            use_container_width=True,
+            config={"displayModeBar": False},
+        )
+
+        st.markdown(
+            """
+                </div>
+                <div class="viz-footer">
+                    <div class="viz-toggles">
+                        <span class="pill-toggle active">
+                            <span class="pill-toggle-dot l"></span>L
+                        </span>
+                        <span class="pill-toggle active">
+                            <span class="pill-toggle-dot r"></span>R
+                        </span>
+                        <span class="pill-toggle active">
+                            <span class="pill-toggle-dot rms"></span>RMS
+                        </span>
+                    </div>
+                    <div class="viz-buttons">
+                        <span class="viz-btn primary"><span class="icon">🔍</span>Zoom</span>
+                        <span class="viz-btn"><span class="icon">⬇️</span>Export Data</span>
+                        <span class="viz-btn"><span class="icon">⚙️</span>Settings</span>
+                    </div>
+                </div>
+              </div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+        # PROMPT AND TIPS
         st.markdown("<br>", unsafe_allow_html=True)
 
-        # PROMPT & TIPS
         p_col, t_col = st.columns([1.5, 1])
         with p_col:
             st.markdown(
