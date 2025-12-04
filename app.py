@@ -49,60 +49,243 @@ st.markdown("""
         margin-bottom: 25px;
         box-shadow: 0 20px 50px -20px rgba(0,0,0,0.7);
         border: 1px solid rgba(255,255,255,0.05);
-        height: 380px;
+        min-height: 260px;
+        max-height: 420px;
     }
-    .hero-bg { width: 100%; height: 100%; object-fit: cover; }
+    .hero-bg { 
+        width: 100%; 
+        height: 100%; 
+        object-fit: cover; 
+        filter: blur(16px) brightness(0.5);
+        transform: scale(1.08);
+    }
     .hero-overlay {
         position: absolute; inset: 0;
-        background: linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.6) 50%, #050505 100%);
-        display: flex; flex-direction: column; justify-content: flex-end; padding: 40px;
+        background: linear-gradient(135deg, rgba(0,0,0,0.75) 0%, rgba(15,15,15,0.85) 40%, rgba(0,0,0,0.9) 100%);
+        display: flex; 
+        flex-direction: column; 
+        justify-content: center; 
+        padding: 32px 40px;
+    }
+
+    .hero-content {
+        display: flex;
+        gap: 24px;
+        align-items: flex-end;
+    }
+    .hero-cover {
+        flex: 0 0 210px;
+        max-width: 210px;
+        aspect-ratio: 1 / 1;
+        border-radius: 20px;
+        overflow: hidden;
+        box-shadow: 0 18px 35px rgba(0,0,0,0.8);
+        border: 1px solid rgba(255,255,255,0.12);
+        background: radial-gradient(circle at 20% 0%, rgba(148,163,184,0.25), rgba(15,23,42,1));
+    }
+    .hero-cover img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+    }
+    .hero-meta {
+        flex: 1;
+        min-width: 0;
     }
     
     .verified-badge {
-        background: rgba(56, 189, 248, 0.2); color: #38bdf8;
-        border: 1px solid rgba(56, 189, 248, 0.4); padding: 6px 12px;
-        border-radius: 100px; font-size: 0.75rem; font-weight: 700;
-        text-transform: uppercase; display: inline-flex; align-items: center; gap: 6px;
+        background: rgba(56, 189, 248, 0.2); 
+        color: #38bdf8;
+        border: 1px solid rgba(56, 189, 248, 0.4); 
+        padding: 6px 12px;
+        border-radius: 100px; 
+        font-size: 0.75rem; 
+        font-weight: 700;
+        text-transform: uppercase; 
+        display: inline-flex; 
+        align-items: center; 
+        gap: 6px;
         backdrop-filter: blur(10px);
     }
-    .artist-title { font-size: 5rem; font-weight: 900; line-height: 0.9; margin: 10px 0; letter-spacing: -3px; background: linear-gradient(to right, #fff, #aaa); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-    .song-subtitle { font-size: 2rem; color: #94a3b8; margin-bottom: 25px; letter-spacing: -1px; }
-    .meta-pill { background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.1); padding: 8px 16px; border-radius: 50px; font-size: 0.85rem; color: #e2e8f0; margin-right: 10px; }
+    .artist-title { 
+        font-size: 3.4rem; 
+        font-weight: 900; 
+        line-height: 0.95; 
+        margin: 10px 0 4px 0; 
+        letter-spacing: -2px; 
+        background: linear-gradient(to right, #ffffff, #d4d4d8); 
+        -webkit-background-clip: text; 
+        -webkit-text-fill-color: transparent; 
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    .song-subtitle { 
+        font-size: 1.3rem; 
+        color: #cbd5f5; 
+        margin-bottom: 18px; 
+        letter-spacing: -0.5px; 
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    .meta-pill { 
+        background: rgba(15,23,42,0.9); 
+        border: 1px solid rgba(148,163,184,0.5); 
+        padding: 6px 14px; 
+        border-radius: 999px; 
+        font-size: 0.8rem; 
+        color: #e2e8f0; 
+        margin-right: 8px; 
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+    }
 
     /* GLASS PANELS */
     .glass-panel {
-        background: #0a0a0a; border: 1px solid #1f1f1f;
-        border-radius: 20px; padding: 24px; height: 100%; position: relative;
+        background: #0a0a0a; 
+        border: 1px solid #1f1f1f;
+        border-radius: 20px; 
+        padding: 24px; 
+        height: 100%; 
+        position: relative;
     }
-    .glow-cyan { box-shadow: 0 0 40px -10px rgba(56, 189, 248, 0.1); border-top: 1px solid rgba(56, 189, 248, 0.2); }
-    .glow-pink { box-shadow: 0 0 40px -10px rgba(236, 72, 153, 0.1); border-top: 1px solid rgba(236, 72, 153, 0.2); }
-    .glow-purple { box-shadow: 0 0 40px -10px rgba(168, 85, 247, 0.1); border-top: 1px solid rgba(168, 85, 247, 0.2); }
+    .glow-cyan { 
+        box-shadow: 0 0 40px -10px rgba(56, 189, 248, 0.1); 
+        border-top: 1px solid rgba(56, 189, 248, 0.2); 
+    }
+    .glow-pink { 
+        box-shadow: 0 0 40px -10px rgba(236, 72, 153, 0.1); 
+        border-top: 1px solid rgba(236, 72, 153, 0.2); 
+    }
+    .glow-purple { 
+        box-shadow: 0 0 40px -10px rgba(168, 85, 247, 0.1); 
+        border-top: 1px solid rgba(168, 85, 247, 0.2); 
+    }
     
-    .panel-header { display: flex; align-items: center; gap: 10px; margin-bottom: 20px; font-size: 0.8rem; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: #64748b; }
+    .panel-header { 
+        display: flex; 
+        align-items: center; 
+        gap: 10px; 
+        margin-bottom: 20px; 
+        font-size: 0.8rem; 
+        font-weight: 700; 
+        letter-spacing: 2px; 
+        text-transform: uppercase; 
+        color: #64748b; 
+    }
     
-    .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
-    .stat-box { background: rgba(255,255,255,0.03); padding: 15px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.03); }
-    .stat-label { font-size: 0.7rem; color: #64748b; margin-bottom: 4px; letter-spacing: 1px; }
-    .stat-value { font-size: 1.1rem; font-weight: 600; color: #fff; }
-    .small-tag { font-size: 0.75rem; padding: 4px 10px; background: #1e1e1e; border-radius: 6px; color: #aaa; border: 1px solid #333; margin-right: 5px; }
+    .stat-grid { 
+        display: grid; 
+        grid-template-columns: 1fr 1fr; 
+        gap: 15px; 
+    }
+    .stat-box { 
+        background: rgba(255,255,255,0.03); 
+        padding: 15px; 
+        border-radius: 12px; 
+        border: 1px solid rgba(255,255,255,0.03); 
+    }
+    .stat-label { 
+        font-size: 0.7rem; 
+        color: #64748b; 
+        margin-bottom: 4px; 
+        letter-spacing: 1px; 
+    }
+    .stat-value { 
+        font-size: 1.1rem; 
+        font-weight: 600; 
+        color: #fff; 
+    }
+    .small-tag { 
+        font-size: 0.75rem; 
+        padding: 4px 10px; 
+        background: #1e1e1e; 
+        border-radius: 6px; 
+        color: #aaa; 
+        border: 1px solid #333; 
+        margin-right: 5px; 
+    }
 
     /* PROMPT BOX */
-    .prompt-container { font-family: 'JetBrains Mono', monospace; background: #050505; border: 1px solid #333; color: #22d3ee; padding: 20px; border-radius: 12px; font-size: 0.9rem; line-height: 1.6; }
-    .tip-item { display: flex; gap: 15px; margin-bottom: 15px; }
-    .tip-num { background: #222; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; border-radius: 50%; font-size: 0.7rem; }
+    .prompt-container { 
+        font-family: 'JetBrains Mono', monospace; 
+        background: #050505; 
+        border: 1px solid #333; 
+        color: #22d3ee; 
+        padding: 20px; 
+        border-radius: 12px; 
+        font-size: 0.9rem; 
+        line-height: 1.6; 
+    }
+    .tip-item { 
+        display: flex; 
+        gap: 15px; 
+        margin-bottom: 15px; 
+    }
+    .tip-num { 
+        background: #222; 
+        width: 24px; 
+        height: 24px; 
+        display: flex; 
+        align-items: center; 
+        justify-content: center; 
+        border-radius: 50%; 
+        font-size: 0.7rem; 
+    }
     
     /* LYRIC STUDIO */
-    .lyric-area textarea { background: #080808 !important; color: #ccc !important; border: 1px solid #333 !important; font-family: 'Inter', sans-serif; }
-    .lyric-output { background: #080808; border: 1px solid #333; padding: 20px; border-radius: 12px; font-family: 'JetBrains Mono', monospace; white-space: pre-wrap; color: #a78bfa; height: 300px; overflow-y: auto; }
+    .lyric-area textarea { 
+        background: #080808 !important; 
+        color: #ccc !important; 
+        border: 1px solid #333 !important; 
+        font-family: 'Inter', sans-serif; 
+    }
+    .lyric-output { 
+        background: #080808; 
+        border: 1px solid #333; 
+        padding: 20px; 
+        border-radius: 12px; 
+        font-family: 'JetBrains Mono', monospace; 
+        white-space: pre-wrap; 
+        color: #a78bfa; 
+        height: 300px; 
+        overflow-y: auto; 
+    }
     
     /* TAGS GUIDE */
     .tag-category { margin-bottom: 15px; }
-    .tag-category h4 { color: #888; font-size: 0.8rem; text-transform: uppercase; margin-bottom: 8px; }
-    .tag-chip { display: inline-block; background: #222; padding: 4px 8px; border-radius: 4px; font-size: 0.75rem; color: #ccc; margin: 0 4px 4px 0; border: 1px solid #333; cursor: pointer; }
-    .tag-chip:hover { border-color: #666; color: #fff; }
+    .tag-category h4 { 
+        color: #888; 
+        font-size: 0.8rem; 
+        text-transform: uppercase; 
+        margin-bottom: 8px; 
+    }
+    .tag-chip { 
+        display: inline-block; 
+        background: #222; 
+        padding: 4px 8px; 
+        border-radius: 4px; 
+        font-size: 0.75rem; 
+        color: #ccc; 
+        margin: 0 4px 4px 0; 
+        border: 1px solid #333; 
+        cursor: pointer; 
+    }
+    .tag-chip:hover { 
+        border-color: #666; 
+        color: #fff; 
+    }
 
     /* UPLOAD */
-    .upload-area { border: 2px dashed #333; border-radius: 20px; padding: 60px; text-align: center; }
+    .upload-area { 
+        border: 2px dashed #333; 
+        border-radius: 20px; 
+        padding: 60px; 
+        text-align: center; 
+    }
     </style>
 """, unsafe_allow_html=True)
 
@@ -195,7 +378,6 @@ def extract_audio_features(file_path):
         harmonic, percussive = librosa.effects.hpss(y)
 
         # 6. Simple vocal presence heuristic
-        #    Look at harmonic content in the speech band (300–3400 Hz)
         S = np.abs(librosa.stft(harmonic, n_fft=2048, hop_length=512))
         freqs = librosa.fft_frequencies(sr=sr, n_fft=2048)
         voice_band = (freqs >= 300) & (freqs <= 3400)
@@ -275,7 +457,6 @@ def analyze_gemini_json(song_data):
         model = genai.GenerativeModel('gemini-1.5-flash')
 
     if song_data.get("source") == "librosa":
-        # Unknown / custom track, rely on audio stats only
         prompt = f"""
 You are an AI assistant specialized in music analysis and AI music prompting.
 
@@ -305,10 +486,10 @@ Based on all this, infer:
 
 Return ONLY valid JSON in this exact structure:
 
-{{
+{
   "mood": "single word",
-  "tempo": "{song_data.get('bpm')}",
-  "key": "{song_data.get('key')} (estimated)",
+  "tempo": "%s",
+  "key": "%s (estimated)",
   "genre": "concise genre",
   "instruments": ["instrument 1", "instrument 2"],
   "vocal_type": "description",
@@ -319,10 +500,9 @@ Return ONLY valid JSON in this exact structure:
     "tip 2",
     "tip 3"
   ]
-}}
-"""
+}
+""" % (song_data.get('bpm'), song_data.get('key'))
     else:
-        # Known or semi-known track via title/artist
         prompt = f"""
 You are an AI assistant specialized in music analysis and AI music prompting.
 
@@ -341,7 +521,7 @@ infer:
 
 Return ONLY valid JSON in this exact structure:
 
-{{
+{
   "mood": "single word",
   "tempo": "number + ' BPM'",
   "key": "musical key",
@@ -355,7 +535,7 @@ Return ONLY valid JSON in this exact structure:
     "tip 2",
     "tip 3"
   ]
-}}
+}
 """
 
     try:
@@ -363,7 +543,6 @@ Return ONLY valid JSON in this exact structure:
         clean_text = response.text.replace("```json", "").replace("```", "").strip()
         return json.loads(clean_text)
     except Exception:
-        # Fallback so the app still shows something useful even if JSON parsing fails
         return {
             "mood": "Unknown",
             "tempo": song_data.get("bpm", ""),
@@ -371,7 +550,7 @@ Return ONLY valid JSON in this exact structure:
             "genre": song_data.get("genre", "Unknown"),
             "instruments": [],
             "vocal_type": "instrumental" if song_data.get("vocals", "").startswith("Probably Instrumental") else "Unknown",
-            "vocal_style": "" if song_data.get("vocals", "").startswith("Probably Instrumental") else "",
+            "vocal_style": "",
             "suno_prompt": f"{song_data.get('genre', 'Unknown')} track at {song_data.get('bpm', '')} with {song_data.get('energy', '')} energy, suitable as a reference style.",
             "tips": []
         }
@@ -411,7 +590,6 @@ LYRICS:
 
 # --- 5. MAIN APPLICATION ---
 def main():
-    # Session state
     if 'song_data' not in st.session_state:
         st.session_state.song_data = None
         st.session_state.analysis = None
@@ -420,7 +598,6 @@ def main():
     if 'uploaded_bytes' not in st.session_state:
         st.session_state.uploaded_bytes = None
 
-    # API key notice
     if not api_key:
         st.warning("Gemini API key is not configured. Audio analysis will work, but AI prompts and lyric tagging will be limited.")
 
@@ -437,14 +614,12 @@ def main():
 
         if uploaded_file:
             with st.spinner("🎧 Analyzing audio DNA..."):
-                # Keep bytes for playback later
                 st.session_state.uploaded_bytes = uploaded_file.getvalue()
 
                 with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as tmp:
                     tmp.write(st.session_state.uploaded_bytes)
                     tmp_path = tmp.name
 
-                # 1. Librosa analysis (always, even if Shazam works)
                 audio_stats = extract_audio_features(tmp_path)
 
                 if not audio_stats.get("success"):
@@ -452,11 +627,9 @@ def main():
                     os.remove(tmp_path)
                     return
 
-                # 2. Try Shazam
                 shazam_result = run_async(identify_song(tmp_path))
 
                 if shazam_result.get("found"):
-                    # Enrich Shazam data with Librosa stats
                     result = {
                         "found": True,
                         "source": "shazam",
@@ -473,7 +646,6 @@ def main():
                         "voice_ratio": audio_stats["voice_ratio"],
                     }
                 else:
-                    # Fallback to deep scan only (this is where Suno songs land)
                     st.toast("Metadata not found. Engaging deep audio scan...", icon="🧬")
                     result = {
                         "found": True,
@@ -491,13 +663,11 @@ def main():
                         "voice_ratio": audio_stats["voice_ratio"],
                     }
 
-                # 3. Fetch visuals
                 if result["source"] == "shazam":
                     result["artist_bg"] = run_async(fetch_artist_image(result["artist"]))
                 else:
                     result["artist_bg"] = "https://images.unsplash.com/photo-1478737270239-2f02b77ac6d5?w=1200"
 
-                # 4. Run Gemini
                 st.session_state.song_data = result
                 st.session_state.analysis = analyze_gemini_json(result)
                 os.remove(tmp_path)
@@ -508,27 +678,37 @@ def main():
         data = st.session_state.song_data
         ai = st.session_state.analysis or {}
 
-        # HERO BANNER
+        # Choose cover image: album art if present, otherwise artist background
+        if data.get('album_art') and isinstance(data.get('album_art'), str) and 'http' in data['album_art']:
+            cover_url = data['album_art']
+        else:
+            cover_url = data.get('artist_bg')
+
+        # HERO BANNER (Spotify-like layout)
         st.markdown(f"""
             <div class="hero-wrapper">
                 <img src="{data['artist_bg']}" class="hero-bg">
                 <div class="hero-overlay">
-                    <div><span class="verified-badge">✓ {data['source'].upper()} ANALYSIS</span></div>
-                    <div class="artist-title">{data['artist']}</div>
-                    <div class="song-subtitle">{data['title']}</div>
-                    <div class="meta-tags">
-                        <span class="meta-pill">🎵 {ai.get('genre', data.get('genre', 'Unknown'))}</span>
-                        <span class="meta-pill">⏱ {ai.get('tempo', data.get('bpm', '--'))}</span>
-                        <span class="meta-pill">🎹 {ai.get('key', data.get('key', '--'))}</span>
+                    <div class="hero-content">
+                        <div class="hero-cover">
+                            <img src="{cover_url}">
+                        </div>
+                        <div class="hero-meta">
+                            <div><span class="verified-badge">✓ {data['source'].upper()} ANALYSIS</span></div>
+                            <div class="artist-title">{data['artist']}</div>
+                            <div class="song-subtitle">{data['title']}</div>
+                            <div class="meta-tags">
+                                <span class="meta-pill">🎵 {ai.get('genre', data.get('genre', 'Unknown'))}</span>
+                                <span class="meta-pill">⏱ {ai.get('tempo', data.get('bpm', '--'))}</span>
+                                <span class="meta-pill">🎹 {ai.get('key', data.get('key', '--'))}</span>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
         """, unsafe_allow_html=True)
 
-        # Album art and audio
-        if data.get('album_art') and 'http' in data['album_art']:
-            st.image(data['album_art'], caption="Album art", use_container_width=True)
-
+        # AUDIO PLAYER ONLY (no extra album image)
         if st.session_state.get("uploaded_bytes"):
             st.audio(st.session_state.uploaded_bytes, format="audio/mp3")
 
