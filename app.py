@@ -6,7 +6,6 @@ import tempfile
 import os
 import requests
 import json
-import random
 import pandas as pd
 import numpy as np
 import librosa
@@ -150,6 +149,7 @@ async def fetch_artist_image(artist):
 def extract_audio_features(file_path):
     """
     Examine the raw audio and extract tempo, key, timbre, and energy.
+    Works even for completely unknown / custom Suno songs.
     """
     try:
         # Load audio (first 60 seconds for speed)
@@ -163,12 +163,12 @@ def extract_audio_features(file_path):
         chroma = librosa.feature.chroma_cqt(y=y, sr=sr)
         chroma_vals = np.sum(chroma, axis=1)
         pitches = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']
-        key_idx = np.argmax(chroma_vals)
+        key_idx = int(np.argmax(chroma_vals))
         key = pitches[key_idx]
 
         # 3. SPECTRAL CENTROID (Brightness/Timbre)
         spectral_centroids = librosa.feature.spectral_centroid(y=y, sr=sr)[0]
-        avg_centroid = np.mean(spectral_centroids)
+        avg_centroid = float(np.mean(spectral_centroids))
         if avg_centroid > 3000:
             brightness = "Bright / Aggressive"
         elif avg_centroid > 2000:
@@ -178,7 +178,7 @@ def extract_audio_features(file_path):
 
         # 4. RMS ENERGY (Loudness/Intensity)
         rms = librosa.feature.rms(y=y)[0]
-        avg_energy = np.mean(rms)
+        avg_energy = float(np.mean(rms))
         if avg_energy > 0.1:
             intensity = "High Energy"
         elif avg_energy > 0.05:
@@ -186,12 +186,27 @@ def extract_audio_features(file_path):
         else:
             intensity = "Low / Chill"
 
+        # 5. Simple percussive vs harmonic estimate (very rough)
+        harmonic, percussive = librosa.effects.hpss(y)
+        perc_level = float(np.mean(np.abs(percussive)))
+        harm_level = float(np.mean(np.abs(harmonic)))
+        perc_ratio = perc_level / (harm_level + 1e-9)
+
+        # Heuristic style tag hint, used only as a clue for Gemini
+        if perc_ratio > 1.2 and intensity != "Low / Chill":
+            style_hint = "Band style with drums and rhythm section, possibly rock or pop with clear percussion"
+        elif intensity == "Low / Chill" and brightness.startswith("Dark"):
+            style_hint = "Lo-fi, ambient or chill ballad style, soft and relaxed"
+        else:
+            style_hint = "Modern production with mixed electronic and acoustic elements"
+
         return {
             "success": True,
             "bpm": f"{bpm} BPM",
             "key": key,
             "timbre": brightness,
-            "energy": intensity
+            "energy": intensity,
+            "style_hint": style_hint
         }
     except Exception as e:
         return {"success": False, "error": str(e)}
@@ -217,69 +232,115 @@ async def identify_song(file_path):
 
 
 def analyze_gemini_json(song_data):
+    """
+    Use Gemini Flash 2.5 to convert either:
+    - Librosa audio stats, or
+    - Shazam metadata
+    into structured JSON with mood, genre, instruments, vocal style, and a Suno-style prompt.
+    """
     if not api_key:
         return None
+
     try:
         model = genai.GenerativeModel('gemini-2.5-flash')
     except Exception:
         model = genai.GenerativeModel('gemini-1.5-flash')
 
-    # --- LOGIC BRANCHING ---
-    if song_data.get('source') == 'librosa':
-        # Unknown Song Analysis Logic
+    if song_data.get("source") == "librosa":
+        # Unknown / custom track, rely on audio stats only
         prompt = f"""
-        Analyze these raw audio statistics from an UNKNOWN song.
-        
-        AUDIO DNA:
-        - Tempo: {song_data.get('bpm')}
-        - Estimated Key: {song_data.get('key')}
-        - Timbre Profile: {song_data.get('timbre')}
-        - Energy Level: {song_data.get('energy')}
-        
-        Based on these stats, deduce the likely genre and style.
-        For example:
-        - 128 BPM + High Energy usually means EDM or House
-        - 80 BPM + Dark usually means HipHop or LoFi
-        
-        Return pure JSON:
-        {{
-            "mood": "Deduced Mood",
-            "key": "{song_data.get('key')} (Estimated)",
-            "tempo": "{song_data.get('bpm')}",
-            "genre": "Likely genre based on stats",
-            "instruments": ["Guess suitable instruments"],
-            "vocal_type": "Suggest vocal style",
-            "vocal_style": "Suggest processing",
-            "suno_prompt": "Genre, Tempo, Key, Instruments, Vocal Style, Energy",
-            "tips": ["Tip based on energy", "Tip based on timbre"]
-        }}
-        """
+You are an AI assistant specialized in music analysis and AI music prompting.
+
+A user uploaded a completely unknown track, possibly created in Suno or another AI tool.
+You only know these audio features:
+
+- Tempo: {song_data.get('bpm')}
+- Key: {song_data.get('key')}
+- Timbre: {song_data.get('timbre')}
+- Energy: {song_data.get('energy')}
+- Style hint: {song_data.get('style_hint', '')}
+
+Based on this, infer:
+
+1. A single-word primary mood (for example: "energetic", "melancholic", "dreamy", "cinematic").
+2. A concise genre (for example: "indie rock", "acoustic ballad", "lofi hip hop", "EDM house", "rock with guitar and drums").
+3. A short list of likely main instruments (for example: ["electric guitar", "drums", "bass", "synths"]).
+4. Vocal type and style. If the track is likely instrumental, say "instrumental, no vocals".
+5. A compact Suno-style prompt (1–2 sentences) describing the style, tempo, key, mood, energy and instrumentation. This should be something the user can paste into Suno as a style reference.
+6. 2–3 very short tips for recreating this vibe in AI music tools.
+
+Return ONLY valid JSON in this exact structure:
+
+{{
+  "mood": "single word",
+  "tempo": "{song_data.get('bpm')}",
+  "key": "{song_data.get('key')} (estimated)",
+  "genre": "concise genre",
+  "instruments": ["instrument 1", "instrument 2"],
+  "vocal_type": "description",
+  "vocal_style": "description",
+  "suno_prompt": "one or two sentences as a style prompt",
+  "tips": [
+    "tip 1",
+    "tip 2",
+    "tip 3"
+  ]
+}}
+"""
     else:
-        # Standard Metadata Logic
+        # Known or semi-known track via title/artist
         prompt = f"""
-        Analyze the song "{song_data['title']}" by "{song_data['artist']}".
-        Use its common style and feel to create settings for AI music generation.
-        
-        Return pure JSON:
-        {{
-            "mood": "Single Word",
-            "key": "Musical key if known or estimated",
-            "tempo": "BPM if known or estimated",
-            "genre": "Concise genre label",
-            "instruments": ["Main instruments or sound sources"],
-            "vocal_type": "Type of vocal (male, female, duet, choir, rap, spoken)",
-            "vocal_style": "Short description of delivery and processing",
-            "suno_prompt": "A compact but detailed style prompt that describes the song feel for AI music generation",
-            "tips": ["Tip 1 for using this vibe in AI", "Tip 2", "Tip 3"]
-        }}
-        """
+You are an AI assistant specialized in music analysis and AI music prompting.
+
+Analyze the song "{song_data['title']}" by "{song_data['artist']}".
+Based on typical information about this track (if known) or reasonable assumptions from the artist and title,
+infer:
+
+- A single-word mood.
+- A concise genre.
+- Tempo in BPM (string, for example "120 BPM", you can estimate if unknown).
+- Key (you can estimate).
+- Main instruments.
+- Vocal type and vocal style.
+- A short Suno-ready style prompt (1–2 sentences).
+- 2–3 short tips for recreating the vibe with AI music tools.
+
+Return ONLY valid JSON in this exact structure:
+
+{{
+  "mood": "single word",
+  "tempo": "number + ' BPM'",
+  "key": "musical key",
+  "genre": "concise genre",
+  "instruments": ["instrument 1", "instrument 2"],
+  "vocal_type": "description",
+  "vocal_style": "description",
+  "suno_prompt": "one or two sentences as a style prompt",
+  "tips": [
+    "tip 1",
+    "tip 2",
+    "tip 3"
+  ]
+}}
+"""
 
     try:
         response = model.generate_content(prompt)
-        clean_text = response.text.replace('```json', '').replace('```', '').strip()
+        clean_text = response.text.replace("```json", "").replace("```", "").strip()
         return json.loads(clean_text)
     except Exception:
-        return None
+        # Fallback so the app still shows something useful even if JSON parsing fails
+        return {
+            "mood": "Unknown",
+            "tempo": song_data.get("bpm", ""),
+            "key": song_data.get("key", ""),
+            "genre": song_data.get("genre", "Unknown"),
+            "instruments": [],
+            "vocal_type": "Unknown",
+            "vocal_style": "",
+            "suno_prompt": f"{song_data.get('genre', 'Unknown')} track at {song_data.get('bpm', '')} with {song_data.get('energy', '')} energy, suitable as a reference style.",
+            "tips": []
+        }
 
 
 def format_lyrics_with_tags(raw_lyrics, song_analysis):
@@ -291,23 +352,22 @@ def format_lyrics_with_tags(raw_lyrics, song_analysis):
         model = genai.GenerativeModel('gemini-1.5-flash')
         
     prompt = f"""
-    Act as a Suno.ai meta tagging expert.
-    
-    CONTEXT:
-    - Genre: {song_analysis.get('genre', 'Pop')}
-    - Mood: {song_analysis.get('mood', 'General')}
-    - Official Tag Dictionary: {SUNO_TAGS}
-    
-    TASK:
-    Insert structural tags like [Intro], [Verse], [Chorus], [Bridge], [Outro], etc, into the following lyrics
-    so they are ready for use in Suno or similar AI music generators.
-    
-    LYRICS:
-    {raw_lyrics}
-    
-    OUTPUT:
-    Return ONLY the lyrics with tags applied, no explanation.
-    """
+Act as a Suno.ai meta-tagging expert.
+
+CONTEXT:
+- Genre: {song_analysis.get('genre', 'Pop')}
+- Mood: {song_analysis.get('mood', 'General')}
+- Official Tag Dictionary: {SUNO_TAGS}
+
+TASK:
+Insert structural tags like [Intro], [Verse], [Chorus], [Bridge], [Outro], etc, into the following lyrics
+so they are ready for use in Suno or similar AI music generators.
+
+Only return the tagged lyrics, no explanation.
+
+LYRICS:
+{raw_lyrics}
+"""
     try:
         response = model.generate_content(prompt)
         return response.text
@@ -350,7 +410,7 @@ def main():
                     tmp.write(st.session_state.uploaded_bytes)
                     tmp_path = tmp.name
 
-                # 1. Librosa analysis (always)
+                # 1. Librosa analysis (always, even if Shazam works)
                 audio_stats = extract_audio_features(tmp_path)
 
                 if not audio_stats.get("success"):
@@ -374,9 +434,10 @@ def main():
                         "key": audio_stats["key"],
                         "timbre": audio_stats["timbre"],
                         "energy": audio_stats["energy"],
+                        "style_hint": audio_stats["style_hint"],
                     }
                 else:
-                    # Fallback to deep scan only
+                    # Fallback to deep scan only (this is where Suno songs land)
                     st.toast("Metadata not found. Engaging deep audio scan...", icon="🧬")
                     result = {
                         "found": True,
@@ -388,7 +449,8 @@ def main():
                         "bpm": audio_stats["bpm"],
                         "key": audio_stats["key"],
                         "timbre": audio_stats["timbre"],
-                        "energy": audio_stats["energy"]
+                        "energy": audio_stats["energy"],
+                        "style_hint": audio_stats["style_hint"],
                     }
 
                 # 3. Fetch visuals
@@ -453,6 +515,9 @@ def main():
                             <div class="stat-value">{data.get('energy', 'N/A')}</div>
                         </div>
                     </div>
+                    <div style="margin-top:10px; font-size:0.75rem; color:#94a3b8;">
+                        BPM: {data.get('bpm', '--')} &nbsp;•&nbsp; Key: {data.get('key', '--')} &nbsp;•&nbsp; Timbre: {data.get('timbre', '--')}
+                    </div>
                     <div style="margin-top:15px">{instruments_html}</div>
                 </div>
             """, unsafe_allow_html=True)
@@ -486,7 +551,7 @@ def main():
             np.random.randn(80, 3) * spikiness,
             columns=['L', 'R', 'RMS']
         )
-        st.area_chart(chart_data, height=120, color=["#38bdf8", "#ec4899", "#8b5cf6"])
+        st.area_chart(chart_data, height=120)
 
         st.markdown("<br>", unsafe_allow_html=True)
 
