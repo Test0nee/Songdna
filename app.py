@@ -21,7 +21,7 @@ SPOTIFY_CLIENT_SECRET = st.secrets.get("SPOTIFY_CLIENT_SECRET")
 def get_spotify_token():
     if not SPOTIFY_CLIENT_ID or not SPOTIFY_CLIENT_SECRET:
         return None
-    url = "https://accounts.spotify.com/api/token" 
+    url = "https://accounts.spotify.com/api/token"
     headers = {"Content-Type": "application/x-www-form-urlencoded"}
     data = {"grant_type": "client_credentials"}
     try:
@@ -46,7 +46,6 @@ st.markdown("""
     
     .stApp {
         background-color: #050505;
-        /* Default fallback gradient */
         background-image: radial-gradient(circle at 50% 0%, #1e1b4b 0%, #020617 60%);
         font-family: 'Inter', sans-serif;
         color: #fff;
@@ -95,7 +94,7 @@ st.markdown("""
     h2.hero-subtitle {
         font-size: 2rem; color: rgba(255,255,255,0.8); margin: 10px 0 25px 0; font-weight: 500; letter-spacing: -0.5px;
     }
-    .meta-row { display: flex; gap: 10px; }
+    .meta-row { display: flex; gap: 10px; flex-wrap: wrap; }
     .meta-tag {
         background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.1);
         padding: 8px 16px; border-radius: 8px; font-size: 0.85rem; color: #e2e8f0; font-weight: 600;
@@ -124,6 +123,15 @@ st.markdown("""
     .stat-val { font-size: 1.1rem; font-weight: 600; }
     .stTextArea textarea { background: #0b0f19 !important; border: 1px solid #1e293b !important; color: #cbd5e1 !important; }
     .code-block { background: #0b0f19; padding: 20px; border-radius: 12px; font-family: 'JetBrains Mono', monospace; color: #a5b4fc; border: 1px solid #1e293b; }
+
+    .pill {
+        display: inline-block;
+        background: rgba(148, 163, 184, 0.15);
+        border-radius: 999px;
+        padding: 4px 10px;
+        margin: 0 6px 6px 0;
+        border: 1px solid rgba(148, 163, 184, 0.35);
+    }
     
     /* BRANDING */
     .brand-wrap { text-align: center; margin-bottom: 24px; }
@@ -142,7 +150,8 @@ SUNO_TAGS = {
 
 # --- 4. HELPERS ---
 api_key = st.secrets.get("GEMINI_API_KEY")
-if api_key: genai.configure(api_key=api_key)
+if api_key:
+    genai.configure(api_key=api_key)
 
 def run_async(coroutine):
     try:
@@ -153,7 +162,8 @@ def run_async(coroutine):
     return loop.run_until_complete(coroutine)
 
 async def fetch_artist_image(artist):
-    if not artist: return None
+    if not artist:
+        return None
     clean_artist = artist.split(',')[0].strip()
     token = get_spotify_token()
     if token:
@@ -164,26 +174,23 @@ async def fetch_artist_image(artist):
                 items = r.json().get("artists", {}).get("items", [])
                 if items and items[0].get("images"):
                     return items[0]["images"][0]["url"]
-        except: pass
+        except:
+            pass
     return "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=1200"
 
 def extract_dominant_color(image_url):
-    """
-    Downloads the image and finds the average color.
-    Returns an RGB tuple (r, g, b).
-    """
     try:
-        if not image_url: return (30, 27, 75) # Default Dark Blue
+        if not image_url:
+            return (30, 27, 75)
         response = requests.get(image_url, timeout=5)
         img = Image.open(BytesIO(response.content)).convert('RGB')
-        # Resize to 1x1 pixel to get average
         img = img.resize((1, 1))
         color = img.getpixel((0, 0))
         return color
     except:
-        return (56, 189, 248) # Default Cyan
+        return (56, 189, 248)
 
-# --- 5. AUDIO ENGINE (FIXED) ---
+# --- 5. AUDIO ENGINE ---
 def safe_load_audio(file_path):
     errors = []
     try:
@@ -195,7 +202,8 @@ def safe_load_audio(file_path):
     try:
         import soundfile as sf
         y, sr = sf.read(file_path)
-        if len(y.shape) > 1: y = y.mean(axis=1)
+        if len(y.shape) > 1:
+            y = y.mean(axis=1)
         return y, sr, None
     except Exception as e:
         errors.append(f"Soundfile: {str(e)}")
@@ -204,15 +212,18 @@ def safe_load_audio(file_path):
 
 def extract_audio_features(file_path):
     y, sr, error = safe_load_audio(file_path)
-    if error: return {"success": False, "error": error}
+    if error:
+        return {"success": False, "error": error}
 
     duration = librosa.get_duration(y=y, sr=sr)
     
     try:
         tempo, _ = librosa.beat.beat_track(y=y, sr=sr)
-        if np.ndim(tempo) > 0: tempo = tempo[0]
+        if np.ndim(tempo) > 0:
+            tempo = tempo[0]
         bpm = round(float(tempo)) if float(tempo) > 0 else 120
-    except: bpm = 120 
+    except:
+        bpm = 120 
     
     chroma = librosa.feature.chroma_cqt(y=y, sr=sr)
     key = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"][np.argmax(np.sum(chroma, axis=1))]
@@ -223,13 +234,16 @@ def extract_audio_features(file_path):
     
     hop = 512
     viz_rms = librosa.feature.rms(y=y, hop_length=hop)[0]
-    viz_rms = viz_rms / (np.max(viz_rms) + 1e-9) 
+    viz_rms = viz_rms / (np.max(viz_rms) + 1e-9)
     
     try:
         onset_env = librosa.onset.onset_strength(y=y, sr=sr)
-        peaks = librosa.util.peak_pick(onset_env, pre_max=3, post_max=3, pre_avg=3, post_avg=5, delta=0.5, wait=10)
+        peaks = librosa.util.peak_pick(
+            onset_env, pre_max=3, post_max=3, pre_avg=3, post_avg=5, delta=0.5, wait=10
+        )
         section_times = librosa.frames_to_time(peaks, sr=sr)
-    except: section_times = []
+    except:
+        section_times = []
     
     filtered_sections = []
     last = 0
@@ -239,15 +253,19 @@ def extract_audio_features(file_path):
             last = t
 
     return {
-        "success": True, "bpm": bpm, "key": key, "energy": energy,
+        "success": True,
+        "bpm": bpm,
+        "key": key,
+        "energy": energy,
         "duration": f"{int(duration//60)}:{int(duration%60):02d}",
-        "waveform": viz_rms.tolist(), "sections": filtered_sections
+        "waveform": viz_rms.tolist(),
+        "sections": filtered_sections
     }
 
 async def identify_song(file_path):
     shazam = Shazam()
     try:
-        out = await shazam.recognize(file_path)
+        out = await shazam.recognize_song(file_path)
         if 'track' in out:
             return {
                 "found": True,
@@ -256,36 +274,54 @@ async def identify_song(file_path):
                 "img": out['track']['images'].get('coverart'),
                 "genre": out['track']['genres']['primary']
             }
-    except: pass
+    except:
+        pass
     return {"found": False}
 
 def analyze_gemini(data):
-    if not api_key: return None
+    if not api_key:
+        return None
     model = genai.GenerativeModel("gemini-2.5-flash")
     prompt = f"""
     Analyze song: {data.get('title','Unknown')} by {data.get('artist','Unknown')}.
     Tech: {data.get('bpm')} BPM, Key {data.get('key')}, {data.get('energy')} Energy.
     Output JSON: {{ "mood": "...", "genre": "...", "instruments": ["..."], "vocal_type": "...", "vocal_style": "...", "suno_prompt": "...", "tips": ["..."] }}
     """
-    try: return json.loads(model.generate_content(prompt).text.replace("```json","").replace("```",""))
-    except: return None
+    try:
+        txt = model.generate_content(prompt).text
+        txt = txt.replace("```json", "").replace("```", "")
+        return json.loads(txt)
+    except:
+        return None
 
 def format_lyrics(raw, style):
-    if not api_key: return "Error: No API Key"
+    if not api_key:
+        return "Error: No API Key"
     model = genai.GenerativeModel("gemini-2.5-flash")
-    return model.generate_content(f"Add Suno tags {SUNO_TAGS} to these lyrics for a {style} song:\n{raw}").text
+    return model.generate_content(
+        f"Add Suno tags {SUNO_TAGS} to these lyrics for a {style} song:\n{raw}"
+    ).text
 
 # --- 6. MAIN APP ---
 def main():
-    if 'data' not in st.session_state: st.session_state.data = None
-    if 'ai' not in st.session_state: st.session_state.ai = None
-    if 'lyrics' not in st.session_state: st.session_state.lyrics = ""
+    if 'data' not in st.session_state:
+        st.session_state.data = None
+    if 'ai' not in st.session_state:
+        st.session_state.ai = None
+    if 'lyrics' not in st.session_state:
+        st.session_state.lyrics = ""
 
-    st.markdown("<h1 style='text-align:center; letter-spacing:-2px; margin-bottom:10px;'>SUNOSONIC</h1>", unsafe_allow_html=True)
+    st.markdown(
+        "<h1 style='text-align:center; letter-spacing:-2px; margin-bottom:10px;'>SUNOSONIC</h1>",
+        unsafe_allow_html=True
+    )
 
     if not st.session_state.data:
-        st.markdown('<div class="top-action"><span style="font-size:0.8rem; letter-spacing:0.18em; text-transform:uppercase; color:#9ca3af;">Upload a track to begin analysis</span></div>', unsafe_allow_html=True)
-        uploaded = st.file_uploader("Drop audio file", type=['mp3','wav','ogg'])
+        st.markdown(
+            '<div class="top-action"><span style="font-size:0.8rem; letter-spacing:0.18em; text-transform:uppercase; color:#9ca3af;">Upload a track to begin analysis</span></div>',
+            unsafe_allow_html=True
+        )
+        uploaded = st.file_uploader("Drop audio file", type=['mp3', 'wav', 'ogg'])
         if uploaded:
             with st.spinner("🎧 Decoding DNA..."):
                 with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as tmp:
@@ -299,10 +335,17 @@ def main():
                     return
 
                 meta = run_async(identify_song(tmp_path))
-                full_data = {**stats, **(meta if meta['found'] else {"title":"Unknown","artist":"Deep Scan","img":None,"genre":"Unknown"})}
+                full_data = {
+                    **stats,
+                    **(meta if meta['found'] else {
+                        "title": "Unknown",
+                        "artist": "Deep Scan",
+                        "img": None,
+                        "genre": "Unknown"
+                    })
+                }
                 full_data['artist_bg'] = run_async(fetch_artist_image(full_data['artist']))
                 
-                # Extract Color
                 img_url = full_data.get('img') or full_data.get('artist_bg')
                 full_data['color_rgb'] = extract_dominant_color(img_url)
 
@@ -315,7 +358,7 @@ def main():
         d = st.session_state.data
         ai = st.session_state.ai or {}
         
-        # --- DYNAMIC BACKGROUND INJECTION ---
+        # dynamic background
         rgb = d.get('color_rgb', (30, 27, 75))
         st.markdown(f"""
             <style>
@@ -329,8 +372,7 @@ def main():
             </style>
         """, unsafe_allow_html=True)
 
-        # --- NEW HERO BANNER ---
-        img_url = d.get('img') or d.get('artist_bg') or "https://images.unsplash.com/photo-1470225620780-dba8ba36b745"
+        img_url = d.get('img') or d.get('artist_bg') or "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=1200"
         
         st.markdown(f"""
             <div class="hero-container">
@@ -360,10 +402,18 @@ def main():
                 <div class="glass-panel">
                     <div class="panel-title">⚡ SONIC PROFILE</div>
                     <div class="stat-grid">
-                        <div class="stat-card"><div class="stat-label">MOOD</div><div class="stat-val">{ai.get('mood','-')}</div></div>
-                        <div class="stat-card"><div class="stat-label">ENERGY</div><div class="stat-val">{d['energy']}</div></div>
+                        <div class="stat-card">
+                            <div class="stat-label">MOOD</div>
+                            <div class="stat-val">{ai.get('mood','-')}</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">ENERGY</div>
+                            <div class="stat-val">{d['energy']}</div>
+                        </div>
                     </div>
-                    <div style="margin-top:15px">{' '.join([f'<span class="pill" style="font-size:0.7rem">{i}</span>' for i in ai.get('instruments',[])])}</div>
+                    <div style="margin-top:15px">
+                        {' '.join([f'<span class="pill" style="font-size:0.7rem">{i}</span>' for i in ai.get('instruments',[])])}
+                    </div>
                 </div>
             """, unsafe_allow_html=True)
         with c2:
@@ -371,8 +421,14 @@ def main():
                 <div class="glass-panel">
                     <div class="panel-title">🎙 VOCAL PROFILE</div>
                     <div class="stat-grid">
-                        <div class="stat-card"><div class="stat-label">TYPE</div><div class="stat-val">{ai.get('vocal_type','-')}</div></div>
-                        <div class="stat-card"><div class="stat-label">STYLE</div><div class="stat-val">{ai.get('vocal_style','-')}</div></div>
+                        <div class="stat-card">
+                            <div class="stat-label">TYPE</div>
+                            <div class="stat-val">{ai.get('vocal_type','-')}</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">STYLE</div>
+                            <div class="stat-val">{ai.get('vocal_style','-')}</div>
+                        </div>
                     </div>
                 </div>
             """, unsafe_allow_html=True)
@@ -388,13 +444,14 @@ def main():
         fig.add_trace(go.Scatter(x=x, y=-y, fill='tozeroy', line=dict(color='#818cf8', width=1), name='Stereo'))
         
         for i, sec in enumerate(d['sections']):
-            sec_x = (sec / (len(y)*512/22050)) * 100 
-            if sec_x > 100: break
+            sec_x = (sec / (len(y)*512/22050)) * 100
+            if sec_x > 100:
+                break
             fig.add_vline(x=sec_x, line_width=1, line_dash="dot", line_color="rgba(255,255,255,0.3)")
             fig.add_annotation(x=sec_x, y=0.8, text=f"SEC {i+1}", showarrow=False, font=dict(color="#ec4899", size=10))
 
         fig.update_layout(
-            height=200, margin=dict(l=0,r=0,t=20,b=0),
+            height=200, margin=dict(l=0, r=0, t=20, b=0),
             paper_bgcolor="#0b0f19", plot_bgcolor="#0b0f19",
             xaxis=dict(showgrid=True, gridcolor='rgba(255,255,255,0.05)', showticklabels=False),
             yaxis=dict(showgrid=True, gridcolor='rgba(255,255,255,0.05)', showticklabels=False, range=[-1.1, 1.1]),
@@ -409,10 +466,16 @@ def main():
 
         c3, c4 = st.columns([1.5, 1])
         with c3:
-            st.markdown(f'<div class="glass-panel"><div class="panel-title">🎹 SUNO PROMPT</div><div class="code-block">{ai.get("suno_prompt","...")}</div></div>', unsafe_allow_html=True)
+            st.markdown(
+                f'<div class="glass-panel"><div class="panel-title">🎹 SUNO PROMPT</div><div class="code-block">{ai.get("suno_prompt","...")}</div></div>',
+                unsafe_allow_html=True
+            )
         with c4:
             tips = "".join([f"<li style='margin-bottom:8px; color:#94a3b8'>{t}</li>" for t in ai.get("tips",[])])
-            st.markdown(f'<div class="glass-panel"><div class="panel-title">💡 TIPS</div><ul>{tips}</ul></div>', unsafe_allow_html=True)
+            st.markdown(
+                f'<div class="glass-panel"><div class="panel-title">💡 TIPS</div><ul>{tips}</ul></div>',
+                unsafe_allow_html=True
+            )
 
         st.markdown('<div class="glass-panel" style="border-color:#4f46e5">', unsafe_allow_html=True)
         st.markdown('<div class="panel-title">📝 LYRIC TAGGER</div>', unsafe_allow_html=True)
@@ -422,8 +485,10 @@ def main():
             if st.button("✨ Auto-Structure Lyrics", use_container_width=True):
                 st.session_state.lyrics = format_lyrics(raw, ai.get('genre'))
         with l2:
-            if st.session_state.lyrics: st.code(st.session_state.lyrics, language="markdown")
-            else: st.info("Result will appear here")
+            if st.session_state.lyrics:
+                st.code(st.session_state.lyrics, language="markdown")
+            else:
+                st.info("Result will appear here")
         st.markdown('</div>', unsafe_allow_html=True)
 
         if st.button("RESET"):
