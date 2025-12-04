@@ -25,52 +25,104 @@ st.markdown("""
     
     /* GLOBAL THEME */
     .stApp {
-        background-color: #050505;
+        background-color: #020617;
         background-image: 
-            radial-gradient(at 0% 0%, rgba(56, 189, 248, 0.08) 0px, transparent 50%),
-            radial-gradient(at 100% 0%, rgba(236, 72, 153, 0.08) 0px, transparent 50%);
+            radial-gradient(at 0% 0%, rgba(56, 189, 248, 0.10) 0px, transparent 55%),
+            radial-gradient(at 100% 0%, rgba(129, 140, 248, 0.18) 0px, transparent 55%);
         font-family: 'Inter', sans-serif;
         color: #ffffff;
     }
     
     .block-container {
-        padding-top: 1rem !important;
+        padding-top: 1.5rem !important;
         padding-bottom: 5rem !important;
         max-width: 1100px !important;
     }
     
     header[data-testid="stHeader"], footer, [data-testid="stSidebar"] {display: none;}
     
-    /* HERO SECTION - FULL ARTIST IMAGE, SPOTIFY STYLE */
+    /* TOP BRANDING */
+    .brand-wrap {
+        text-align: center;
+        margin-bottom: 24px;
+    }
+    .brand-logo {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 48px;
+        height: 48px;
+        border-radius: 999px;
+        background: radial-gradient(circle at 30% 0%, #22d3ee, #4c1d95);
+        box-shadow: 0 0 40px rgba(56,189,248,0.7);
+        margin-bottom: 10px;
+    }
+    .brand-logo-inner {
+        width: 20px;
+        height: 20px;
+        border-radius: 999px;
+        border: 2px solid rgba(15,23,42,0.9);
+        box-shadow: 0 0 0 2px rgba(15,23,42,0.6);
+        background: radial-gradient(circle, #f9fafb 0%, #1e293b 55%, #020617 100%);
+    }
+    .brand-title {
+        font-size: 2.6rem;
+        font-weight: 900;
+        letter-spacing: 0.24em;
+        text-transform: uppercase;
+        margin: 0;
+        text-shadow: 0 0 35px rgba(59,130,246,0.5);
+    }
+    .brand-subtitle {
+        font-size: 0.78rem;
+        letter-spacing: 0.32em;
+        text-transform: uppercase;
+        color: #6b7280;
+        margin-top: 4px;
+    }
+    
+    /* LINK-LIKE BUTTON */
+    .top-action {
+        text-align: center;
+        margin: 10px 0 24px 0;
+    }
+
+    /* HERO SECTION - CARD STYLE LIKE YOUR MOCKUP */
     .hero-wrapper {
         position: relative;
-        border-radius: 24px;
+        border-radius: 28px;
         overflow: hidden;
         margin-bottom: 25px;
-        box-shadow: 0 20px 50px -20px rgba(0,0,0,0.7);
-        border: 1px solid rgba(255,255,255,0.05);
+        box-shadow: 0 28px 80px -40px rgba(15,23,42,0.9);
+        border: 1px solid rgba(148,163,184,0.3);
         height: 320px;
+        background: radial-gradient(circle at 0% 0%, #1e293b, #020617);
     }
     .hero-bg { 
         width: 100%; 
         height: 100%; 
         object-fit: cover; 
-        transform: scale(1.03);
-        filter: brightness(0.7);
+        transform: scale(1.06);
+        filter: saturate(1.1) brightness(0.85);
     }
     .hero-overlay {
         position: absolute; 
         inset: 0;
-        /* dark at bottom, fading to transparent at top */
-        background: linear-gradient(
-            to top, 
-            rgba(0,0,0,0.9) 0%, 
-            rgba(0,0,0,0.65) 40%, 
-            rgba(0,0,0,0.0) 85%
-        );
+        background:
+            linear-gradient(to top, rgba(15,23,42,0.95) 0%, rgba(15,23,42,0.85) 32%, rgba(15,23,42,0.35) 65%, rgba(15,23,42,0.0) 100%),
+            radial-gradient(circle at 0% 0%, rgba(59,130,246,0.25), transparent 55%),
+            radial-gradient(circle at 100% 0%, rgba(236,72,153,0.25), transparent 55%);
         display: flex; 
         align-items: flex-end; 
-        padding: 32px 40px;
+        padding: 26px 32px;
+    }
+
+    .hero-inner {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        width: 100%;
+        gap: 24px;
     }
 
     .hero-meta {
@@ -78,9 +130,9 @@ st.markdown("""
     }
 
     .verified-badge {
-        background: rgba(56, 189, 248, 0.2); 
-        color: #38bdf8;
-        border: 1px solid rgba(56, 189, 248, 0.4); 
+        background: rgba(37, 99, 235, 0.18); 
+        color: #bfdbfe;
+        border: 1px solid rgba(59, 130, 246, 0.65); 
         padding: 6px 12px;
         border-radius: 100px; 
         font-size: 0.75rem; 
@@ -89,15 +141,22 @@ st.markdown("""
         display: inline-flex; 
         align-items: center; 
         gap: 6px;
-        backdrop-filter: blur(10px);
+        backdrop-filter: blur(14px);
+    }
+    .verified-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 999px;
+        background: #22c55e;
+        box-shadow: 0 0 10px rgba(34,197,94,0.9);
     }
     .artist-title { 
-        font-size: 3.6rem; 
+        font-size: 3.2rem; 
         font-weight: 900; 
         line-height: 0.95; 
         margin: 10px 0 4px 0; 
         letter-spacing: -2px; 
-        background: linear-gradient(to right, #ffffff, #d4d4d8); 
+        background: linear-gradient(to right, #ffffff, #e5e7eb); 
         -webkit-background-clip: text; 
         -webkit-text-fill-color: transparent; 
         white-space: nowrap;
@@ -106,7 +165,7 @@ st.markdown("""
     }
     .song-subtitle { 
         font-size: 1.3rem; 
-        color: #e5e7eb; 
+        color: #cbd5f5; 
         margin-bottom: 18px; 
         letter-spacing: -0.3px; 
         white-space: nowrap;
@@ -114,8 +173,8 @@ st.markdown("""
         text-overflow: ellipsis;
     }
     .meta-pill { 
-        background: rgba(15,23,42,0.85); 
-        border: 1px solid rgba(148,163,184,0.5); 
+        background: rgba(15,23,42,0.96); 
+        border: 1px solid rgba(148,163,184,0.55); 
         padding: 6px 14px; 
         border-radius: 999px; 
         font-size: 0.8rem; 
@@ -125,27 +184,60 @@ st.markdown("""
         align-items: center;
         gap: 6px;
     }
+    .meta-pill span.icon {
+        font-size: 0.9rem;
+    }
+
+    .hero-play-wrap {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+    }
+    .hero-play-btn {
+        width: 58px;
+        height: 58px;
+        border-radius: 999px;
+        background: radial-gradient(circle at 30% 0%, #22c55e, #16a34a);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 18px 35px rgba(22,163,74,0.9);
+        border: 2px solid rgba(15,23,42,0.8);
+    }
+    .hero-play-btn span {
+        margin-left: 3px;
+        width: 0;
+        height: 0;
+        border-top: 9px solid transparent;
+        border-bottom: 9px solid transparent;
+        border-left: 14px solid #052e16;
+    }
+    .hero-duration {
+        font-size: 0.8rem;
+        color: #e5e7eb;
+        opacity: 0.8;
+    }
 
     /* GLASS PANELS */
     .glass-panel {
-        background: #0a0a0a; 
-        border: 1px solid #1f1f1f;
+        background: #020617; 
+        border: 1px solid #1f2937;
         border-radius: 20px; 
         padding: 24px; 
         height: 100%; 
         position: relative;
     }
     .glow-cyan { 
-        box-shadow: 0 0 40px -10px rgba(56, 189, 248, 0.1); 
-        border-top: 1px solid rgba(56, 189, 248, 0.2); 
+        box-shadow: 0 0 40px -10px rgba(56, 189, 248, 0.18); 
+        border-top: 1px solid rgba(56, 189, 248, 0.35); 
     }
     .glow-pink { 
-        box-shadow: 0 0 40px -10px rgba(236, 72, 153, 0.1); 
-        border-top: 1px solid rgba(236, 72, 153, 0.2); 
+        box-shadow: 0 0 40px -10px rgba(236, 72, 153, 0.18); 
+        border-top: 1px solid rgba(236, 72, 153, 0.35); 
     }
     .glow-purple { 
-        box-shadow: 0 0 40px -10px rgba(168, 85, 247, 0.1); 
-        border-top: 1px solid rgba(168, 85, 247, 0.2); 
+        box-shadow: 0 0 40px -10px rgba(129, 140, 248, 0.25); 
+        border-top: 1px solid rgba(129, 140, 248, 0.4); 
     }
     
     .panel-header { 
@@ -157,7 +249,7 @@ st.markdown("""
         font-weight: 700; 
         letter-spacing: 2px; 
         text-transform: uppercase; 
-        color: #64748b; 
+        color: #6b7280; 
     }
     
     .stat-grid { 
@@ -166,37 +258,37 @@ st.markdown("""
         gap: 15px; 
     }
     .stat-box { 
-        background: rgba(255,255,255,0.03); 
+        background: rgba(15,23,42,0.95); 
         padding: 15px; 
         border-radius: 12px; 
-        border: 1px solid rgba(255,255,255,0.03); 
+        border: 1px solid rgba(31,41,55,1); 
     }
     .stat-label { 
         font-size: 0.7rem; 
-        color: #64748b; 
+        color: #6b7280; 
         margin-bottom: 4px; 
         letter-spacing: 1px; 
     }
     .stat-value { 
         font-size: 1.1rem; 
         font-weight: 600; 
-        color: #fff; 
+        color: #f9fafb; 
     }
     .small-tag { 
         font-size: 0.75rem; 
         padding: 4px 10px; 
-        background: #1e1e1e; 
+        background: #020617; 
         border-radius: 6px; 
-        color: #aaa; 
-        border: 1px solid #333; 
+        color: #9ca3af; 
+        border: 1px solid #1f2937; 
         margin-right: 5px; 
     }
 
     /* PROMPT BOX */
     .prompt-container { 
         font-family: 'JetBrains Mono', monospace; 
-        background: #050505; 
-        border: 1px solid #333; 
+        background: #020617; 
+        border: 1px solid #1f2937; 
         color: #22d3ee; 
         padding: 20px; 
         border-radius: 12px; 
@@ -209,7 +301,7 @@ st.markdown("""
         margin-bottom: 15px; 
     }
     .tip-num { 
-        background: #222; 
+        background: #111827; 
         width: 24px; 
         height: 24px; 
         display: flex; 
@@ -221,14 +313,14 @@ st.markdown("""
     
     /* LYRIC STUDIO */
     .lyric-area textarea { 
-        background: #080808 !important; 
-        color: #ccc !important; 
-        border: 1px solid #333 !important; 
+        background: #020617 !important; 
+        color: #e5e7eb !important; 
+        border: 1px solid #1f2937 !important; 
         font-family: 'Inter', sans-serif; 
     }
     .lyric-output { 
-        background: #080808; 
-        border: 1px solid #333; 
+        background: #020617; 
+        border: 1px solid #1f2937; 
         padding: 20px; 
         border-radius: 12px; 
         font-family: 'JetBrains Mono', monospace; 
@@ -237,41 +329,16 @@ st.markdown("""
         height: 300px; 
         overflow-y: auto; 
     }
-    
-    /* TAGS GUIDE */
-    .tag-category { margin-bottom: 15px; }
-    .tag-category h4 { 
-        color: #888; 
-        font-size: 0.8rem; 
-        text-transform: uppercase; 
-        margin-bottom: 8px; 
-    }
-    .tag-chip { 
-        display: inline-block; 
-        background: #222; 
-        padding: 4px 8px; 
-        border-radius: 4px; 
-        font-size: 0.75rem; 
-        color: #ccc; 
-        margin: 0 4px 4px 0; 
-        border: 1px solid #333; 
-        cursor: pointer; 
-    }
-    .tag-chip:hover { 
-        border-color: #666; 
-        color: #fff; 
-    }
 
     /* UPLOAD */
     .upload-area { 
-        border: 2px dashed #333; 
+        border: 2px dashed #1f2937; 
         border-radius: 20px; 
         padding: 60px; 
         text-align: center; 
     }
     </style>
 """, unsafe_allow_html=True)
-
 
 # --- 3. KNOWLEDGE BASE ---
 SUNO_TAGS = {
@@ -299,7 +366,7 @@ def run_async(coroutine):
 
 async def fetch_artist_image(artist):
     if not artist:
-        return "https://images.unsplash.com/photo-1514525253440-b393452e8d26?w=1200"
+        return "https://images.unsplash.com/photo-1514525253440-b393452e8d26?w=1600"
     clean_artist = artist.split(',')[0].split('&')[0].split('feat')[0].strip()
     try:
         url = f"https://api.deezer.com/search/artist?q={clean_artist}"
@@ -308,8 +375,8 @@ async def fetch_artist_image(artist):
         if 'data' in data and data['data']:
             return data['data'][0]['picture_xl']
     except Exception:
-        return "https://images.unsplash.com/photo-1514525253440-b393452e8d26?w=1200"
-    return "https://images.unsplash.com/photo-1514525253440-b393452e8d26?w=1200"
+        return "https://images.unsplash.com/photo-1514525253440-b393452e8d26?w=1600"
+    return "https://images.unsplash.com/photo-1514525253440-b393452e8d26?w=1600"
 
 
 # --- LIBROSA AUDIO ANALYSIS ENGINE ---
@@ -322,16 +389,21 @@ def extract_audio_features(file_path):
     - Energy
     - Simple vocal presence heuristic
     - Style hint based on harmonic/percussive balance
+    - Duration (mm:ss)
     """
     try:
-        # Load audio (first 60 seconds for speed)
-        y, sr = librosa.load(file_path, duration=60)
+        # Load full audio for better duration
+        y, sr = librosa.load(file_path, sr=None)
+        duration_sec = librosa.get_duration(y=y, sr=sr)
+        minutes = int(duration_sec // 60)
+        seconds = int(round(duration_sec % 60))
+        duration_str = f"{minutes}:{seconds:02d}"
 
         # 1. TEMPO (BPM)
         tempo, _ = librosa.beat.beat_track(y=y, sr=sr)
-        bpm = round(float(tempo))
+        bpm = round(float(tempo)) if float(tempo) > 0 else 0
 
-        # 2. KEY DETECTION (simple rough estimate)
+        # 2. KEY DETECTION (rough)
         chroma = librosa.feature.chroma_cqt(y=y, sr=sr)
         chroma_vals = np.sum(chroma, axis=1)
         pitches = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']
@@ -390,17 +462,18 @@ def extract_audio_features(file_path):
         elif intensity == "Low / Chill" and brightness.startswith("Dark"):
             style_hint = "Lo-fi, ambient or chill ballad style, soft and relaxed."
         else:
-            style_hint = "Modern production with a mix of electronic and acoustic elements."
+            style_hint = "Modern production with a blend of electronic and acoustic elements."
 
         return {
             "success": True,
-            "bpm": f"{bpm} BPM",
+            "bpm": f"{bpm} BPM" if bpm > 0 else "Unknown BPM",
             "key": key,
             "timbre": brightness,
             "energy": intensity,
             "style_hint": style_hint,
             "vocals": vocals_flag,
-            "voice_ratio": round(voice_ratio, 2)
+            "voice_ratio": round(voice_ratio, 2),
+            "duration": duration_str
         }
     except Exception as e:
         return {"success": False, "error": str(e)}
@@ -421,17 +494,11 @@ async def identify_song(file_path):
                 "genre": track.get('genres', {}).get('primary', 'Electronic')
             }
         return {"found": False}
-    except Exception as e:
-        return {"found": False, "error": str(e)}
+    except Exception:
+        return {"found": False, "error": "Shazam failed"}
 
 
 def analyze_gemini_json(song_data):
-    """
-    Use Gemini Flash 2.5 to convert either:
-    - Librosa audio stats, or
-    - Shazam metadata
-    into structured JSON with mood, genre, instruments, vocal style, and a Suno-style prompt.
-    """
     if not api_key:
         return None
 
@@ -452,6 +519,7 @@ You only know these audio features:
 - Timbre: {song_data.get('timbre')}
 - Energy: {song_data.get('energy')}
 - Style hint: {song_data.get('style_hint', '')}
+- Duration: {song_data.get('duration', 'Unknown')}
 - Vocal presence heuristic: {song_data.get('vocals', 'Unknown')} (voice band ratio {song_data.get('voice_ratio', 0)})
 
 Use the vocal heuristic as a strong hint:
@@ -461,19 +529,19 @@ Use the vocal heuristic as a strong hint:
 
 Based on all this, infer:
 
-1. A single-word primary mood (for example: "energetic", "melancholic", "dreamy", "cinematic").
-2. A concise genre (for example: "indie rock", "acoustic ballad", "lofi hip hop", "EDM house", "rock with guitar and drums").
-3. A short list of likely main instruments (for example: ["electric guitar", "drums", "bass", "synths"]).
-4. Vocal type and style. If the heuristics suggest instrumental, set vocal_type to "instrumental" and vocal_style to "no lead vocal, instrumental track".
-5. A compact Suno-style prompt (1–2 sentences) describing the style, tempo, key, mood, energy and instrumentation. This should be something the user can paste into Suno as a style reference.
-6. 2–3 very short tips for recreating this vibe in AI music tools.
+1. A single-word primary mood.
+2. A concise genre.
+3. A short list of likely main instruments.
+4. Vocal type and style.
+5. A compact Suno-style prompt (1–2 sentences).
+6. 2–3 very short tips.
 
 Return ONLY valid JSON in this exact structure:
 
-{
+{{
   "mood": "single word",
-  "tempo": "%s",
-  "key": "%s (estimated)",
+  "tempo": "{song_data.get('bpm')}",
+  "key": "{song_data.get('key')} (estimated)",
   "genre": "concise genre",
   "instruments": ["instrument 1", "instrument 2"],
   "vocal_type": "description",
@@ -484,8 +552,8 @@ Return ONLY valid JSON in this exact structure:
     "tip 2",
     "tip 3"
   ]
-}
-""" % (song_data.get('bpm'), song_data.get('key'))
+}}
+"""
     else:
         prompt = f"""
 You are an AI assistant specialized in music analysis and AI music prompting.
@@ -494,18 +562,18 @@ Analyze the song "{song_data['title']}" by "{song_data['artist']}".
 Based on typical information about this track (if known) or reasonable assumptions from the artist and title,
 infer:
 
-- A single-word mood.
-- A concise genre.
-- Tempo in BPM (string, for example "120 BPM", you can estimate if unknown).
-- Key (you can estimate).
+- Single-word mood.
+- Concise genre.
+- Tempo (string, like "120 BPM").
+- Key.
 - Main instruments.
-- Vocal type and vocal style.
+- Vocal type and style.
 - A short Suno-ready style prompt (1–2 sentences).
-- 2–3 short tips for recreating the vibe with AI music tools.
+- 2–3 short tips.
 
 Return ONLY valid JSON in this exact structure:
 
-{
+{{
   "mood": "single word",
   "tempo": "number + ' BPM'",
   "key": "musical key",
@@ -519,7 +587,7 @@ Return ONLY valid JSON in this exact structure:
     "tip 2",
     "tip 3"
   ]
-}
+}}
 """
 
     try:
@@ -533,9 +601,9 @@ Return ONLY valid JSON in this exact structure:
             "key": song_data.get("key", ""),
             "genre": song_data.get("genre", "Unknown"),
             "instruments": [],
-            "vocal_type": "instrumental" if song_data.get("vocals", "").startswith("Probably Instrumental") else "Unknown",
+            "vocal_type": "Unknown",
             "vocal_style": "",
-            "suno_prompt": f"{song_data.get('genre', 'Unknown')} track at {song_data.get('bpm', '')} with {song_data.get('energy', '')} energy, suitable as a reference style.",
+            "suno_prompt": f"{song_data.get('genre', 'Unknown')} track at {song_data.get('bpm', '')}, {song_data.get('energy', '')} energy.",
             "tips": []
         }
 
@@ -585,12 +653,24 @@ def main():
     if not api_key:
         st.warning("Gemini API key is not configured. Audio analysis will work, but AI prompts and lyric tagging will be limited.")
 
-    # HEADER
-    st.markdown("<h1 style='text-align:center; letter-spacing:-2px; margin-bottom:0;'>SUNOSONIC</h1>", unsafe_allow_html=True)
-    st.markdown("<p style='text-align:center; color:#555; font-size:0.8rem; letter-spacing:4px; margin-bottom:40px;'>AI AUDIO INTELLIGENCE</p>", unsafe_allow_html=True)
+    # BRAND HEADER
+    st.markdown(
+        """
+        <div class="brand-wrap">
+            <div class="brand-logo"><div class="brand-logo-inner"></div></div>
+            <h1 class="brand-title">SUNOSONIC</h1>
+            <div class="brand-subtitle">AI AUDIO INTELLIGENCE STUDIO</div>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
 
     # --- STATE 1: UPLOAD ---
     if not st.session_state.song_data:
+        st.markdown(
+            '<div class="top-action"><span style="font-size:0.8rem; letter-spacing:0.18em; text-transform:uppercase; color:#9ca3af;">Upload a track to begin analysis</span></div>',
+            unsafe_allow_html=True
+        )
         uploaded_file = st.file_uploader(" ", type=['mp3', 'wav', 'ogg'])
 
         if not uploaded_file:
@@ -628,6 +708,7 @@ def main():
                         "style_hint": audio_stats["style_hint"],
                         "vocals": audio_stats["vocals"],
                         "voice_ratio": audio_stats["voice_ratio"],
+                        "duration": audio_stats["duration"]
                     }
                 else:
                     st.toast("Metadata not found. Engaging deep audio scan...", icon="🧬")
@@ -636,7 +717,7 @@ def main():
                         "source": "librosa",
                         "title": "Unknown Track (Deep Scan)",
                         "artist": "Audio Fingerprint",
-                        "album_art": "https://images.unsplash.com/photo-1511379938547-c1f69419868d?w=1200",
+                        "album_art": "https://images.unsplash.com/photo-1511379938547-c1f69419868d?w=1600",
                         "genre": "Analyzing Signal...",
                         "bpm": audio_stats["bpm"],
                         "key": audio_stats["key"],
@@ -645,12 +726,13 @@ def main():
                         "style_hint": audio_stats["style_hint"],
                         "vocals": audio_stats["vocals"],
                         "voice_ratio": audio_stats["voice_ratio"],
+                        "duration": audio_stats["duration"]
                     }
 
                 if result["source"] == "shazam":
                     result["artist_bg"] = run_async(fetch_artist_image(result["artist"]))
                 else:
-                    result["artist_bg"] = "https://images.unsplash.com/photo-1478737270239-2f02b77ac6d5?w=1200"
+                    result["artist_bg"] = "https://images.unsplash.com/photo-1478737270239-2f02b77ac6d5?w=1600"
 
                 st.session_state.song_data = result
                 st.session_state.analysis = analyze_gemini_json(result)
@@ -662,26 +744,49 @@ def main():
         data = st.session_state.song_data
         ai = st.session_state.analysis or {}
 
-        # HERO BANNER - full artist image background, text at bottom left
+        # Top "Analyze new track" action
+        cols = st.columns([1, 1, 1])
+        with cols[1]:
+            if st.button("← ANALYZE NEW TRACK", use_container_width=True):
+                st.session_state.song_data = None
+                st.session_state.analysis = None
+                st.session_state.formatted_lyrics = ""
+                st.session_state.uploaded_bytes = None
+                st.rerun()
+
+        # HERO CARD
+        hero_bg = data.get('artist_bg') or data.get('album_art')
+        hero_bg = hero_bg or "https://images.unsplash.com/photo-1511379938547-c1f69419868d?w=1600"
+
         st.markdown(f"""
             <div class="hero-wrapper">
-                <img src="{data['artist_bg']}" class="hero-bg">
+                <img src="{hero_bg}" class="hero-bg">
                 <div class="hero-overlay">
-                    <div class="hero-meta">
-                        <div><span class="verified-badge">✓ {data['source'].upper()} ANALYSIS</span></div>
-                        <div class="artist-title">{data['artist']}</div>
-                        <div class="song-subtitle">{data['title']}</div>
-                        <div class="meta-tags">
-                            <span class="meta-pill">🎵 {ai.get('genre', data.get('genre', 'Unknown'))}</span>
-                            <span class="meta-pill">⏱ {ai.get('tempo', data.get('bpm', '--'))}</span>
-                            <span class="meta-pill">🎹 {ai.get('key', data.get('key', '--'))}</span>
+                    <div class="hero-inner">
+                        <div class="hero-meta">
+                            <div class="verified-badge">
+                                <span class="verified-dot"></span>
+                                <span>{data['source'].upper()} ANALYSIS</span>
+                            </div>
+                            <div class="artist-title">{data['artist']}</div>
+                            <div class="song-subtitle">{data['title']}</div>
+                            <div class="meta-tags">
+                                <span class="meta-pill"><span class="icon">🎵</span>{ai.get('genre', data.get('genre', 'Unknown'))}</span>
+                                <span class="meta-pill"><span class="icon">⏱</span>{ai.get('tempo', data.get('bpm', '--'))}</span>
+                                <span class="meta-pill"><span class="icon">🎹</span>{ai.get('key', data.get('key', '--'))}</span>
+                                <span class="meta-pill"><span class="icon">⏰</span>{data.get('duration', '--:--')}</span>
+                            </div>
+                        </div>
+                        <div class="hero-play-wrap">
+                            <div class="hero-play-btn"><span></span></div>
+                            <div class="hero-duration">{data.get('duration', '--:--')}</div>
                         </div>
                     </div>
                 </div>
             </div>
         """, unsafe_allow_html=True)
 
-        # AUDIO PLAYER ONLY
+        # AUDIO PLAYER
         if st.session_state.get("uploaded_bytes"):
             st.audio(st.session_state.uploaded_bytes, format="audio/mp3")
 
@@ -710,7 +815,7 @@ def main():
                             <div class="stat-value">{data.get('vocals', 'Unknown')}</div>
                         </div>
                     </div>
-                    <div style="margin-top:10px; font-size:0.75rem; color:#94a3b8;">
+                    <div style="margin-top:10px; font-size:0.75rem; color:#9ca3af;">
                         BPM: {data.get('bpm', '--')} &nbsp;•&nbsp; Key: {data.get('key', '--')} &nbsp;•&nbsp; Timbre: {data.get('timbre', '--')}
                     </div>
                     <div style="margin-top:15px">{instruments_html}</div>
@@ -731,14 +836,14 @@ def main():
                             <div class="stat-value">Modern</div>
                         </div>
                     </div>
-                    <div style="margin-top:15px; font-size:0.9rem; color:#ccc; font-style:italic;">"{ai.get('vocal_style', '-')}"</div>
+                    <div style="margin-top:15px; font-size:0.9rem; color:#e5e7eb; font-style:italic;">"{ai.get('vocal_style', '-')}"</div>
                 </div>
             """, unsafe_allow_html=True)
 
         # VISUALIZER
         st.markdown("<br>", unsafe_allow_html=True)
         st.markdown(
-            '<div class="glass-panel" style="border-top: 1px solid rgba(255,255,255,0.1);"><div class="panel-header">🎼 STRUCTURAL DYNAMICS & RMS (SIMULATED)</div></div>',
+            '<div class="glass-panel" style="border-top: 1px solid rgba(129,140,248,0.35);"><div class="panel-header">🎼 STRUCTURAL DYNAMICS & RMS (SIMULATED)</div></div>',
             unsafe_allow_html=True
         )
         spikiness = 2.0 if "High" in data.get('energy', '') else 0.5
@@ -754,7 +859,7 @@ def main():
         p_col, t_col = st.columns([1.5, 1])
         with p_col:
             st.markdown(
-                f'<div class="glass-panel glow-purple"><div class="panel-header"><span style="color:#a855f7">🎹</span> SUNO AI STYLE PROMPT</div><div class="prompt-container">{ai.get("suno_prompt", "Prompt not available.")}</div></div>',
+                f'<div class="glass-panel glow-purple"><div class="panel-header"><span style="color:#818cf8">🎹</span> SUNO AI STYLE PROMPT</div><div class="prompt-container">{ai.get("suno_prompt", "Prompt not available.")}</div></div>',
                 unsafe_allow_html=True
             )
 
@@ -771,8 +876,8 @@ def main():
 
         # LYRIC STUDIO
         st.markdown("<br>", unsafe_allow_html=True)
-        st.markdown('<div class="glass-panel glow-purple" style="border: 1px solid #4c1d95;">', unsafe_allow_html=True)
-        st.markdown('<div class="panel-header">📝 LYRIC STUDIO <span class="small-tag" style="margin-left:10px; color:#a78bfa; border-color:#a78bfa;">AUTO TAGGER</span></div>', unsafe_allow_html=True)
+        st.markdown('<div class="glass-panel glow-purple" style="border: 1px solid #1f2937;">', unsafe_allow_html=True)
+        st.markdown('<div class="panel-header">📝 LYRIC STUDIO <span class="small-tag" style="margin-left:10px; color:#a78bfa; border-color:#4c1d95;">AUTO TAGGER</span></div>', unsafe_allow_html=True)
         
         l_col1, l_col2 = st.columns(2)
         with l_col1:
@@ -807,16 +912,6 @@ def main():
                     unsafe_allow_html=True
                 )
         st.markdown('</div>', unsafe_allow_html=True)
-
-        # RESET
-        st.markdown("<br>", unsafe_allow_html=True)
-        if st.button("⬅ Analyze new track", use_container_width=True):
-            st.session_state.song_data = None
-            st.session_state.analysis = None
-            st.session_state.formatted_lyrics = ""
-            st.session_state.uploaded_bytes = None
-            st.rerun()
-
 
 
 if __name__ == "__main__":
