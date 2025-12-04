@@ -193,12 +193,14 @@ def extract_dominant_color(image_url):
 # --- 5. AUDIO ENGINE ---
 def safe_load_audio(file_path):
     errors = []
+    # Try Librosa first
     try:
         y, sr = librosa.load(file_path, sr=None, duration=180)
         return y, sr, None
     except Exception as e:
         errors.append(f"Librosa: {str(e)}")
     
+    # Try Soundfile as backup
     try:
         import soundfile as sf
         y, sr = sf.read(file_path)
@@ -233,6 +235,7 @@ def extract_audio_features(file_path):
     
     try:
         onset_env = librosa.onset.onset_strength(y=y, sr=sr)
+        # Using named arguments to avoid TypeError in newer librosa
         peaks = librosa.util.peak_pick(onset_env, pre_max=20, post_max=20, pre_avg=20, post_avg=20, delta=0.5, wait=100)
         section_times = librosa.frames_to_time(peaks, sr=sr)
     except: section_times = []
@@ -265,7 +268,7 @@ async def identify_song(file_path):
     except: pass
     return {"found": False}
 
-# --- AI BRAIN ---
+# --- AI BRAIN (WITH FIXED HTML OUTPUT) ---
 def analyze_gemini(data, intent="Original Style (Analysis)"):
     if not api_key: return None
     model = genai.GenerativeModel("gemini-2.5-flash")
@@ -274,17 +277,14 @@ def analyze_gemini(data, intent="Original Style (Analysis)"):
     
     prompt = f"""
     Act as a Music Producer.
-    
-    SOURCE AUDIO DNA:
-    - Song: {data.get('title','Unknown')} by {data.get('artist','Unknown')}
-    - BPM: {data.get('bpm')} | Key: {data.get('key')} | Energy: {data.get('energy')}
-    
+    SOURCE AUDIO: {data.get('title','Unknown')} - {data.get('bpm')} BPM, {data.get('key')}, {data.get('energy')} Energy.
+    STRUCTURE SEGMENTS: {seg_str}
     USER INTENT: "{intent}"
     
     TASK:
-    1. Breakdown the Genre DNA (percentages).
-    2. Map the song structure (Intro, Verse, etc).
-    3. Create a Suno v3 Prompt.
+    1. Estimate Genre Breakdown (e.g. 40% Pop, 60% Rock).
+    2. Map structure (Intro, Verse, Chorus).
+    3. Create Suno Prompt.
     
     OUTPUT JSON:
     {{
@@ -373,6 +373,7 @@ def main():
 
         c1, c2 = st.columns(2)
         with c1:
+            # --- GENRE DNA VISUALIZATION (HTML FIX) ---
             breakdown_html = ""
             colors = ["#38bdf8", "#818cf8", "#c084fc", "#f472b6"]
             if 'genre_breakdown' in ai:
@@ -412,7 +413,7 @@ def main():
             timeline_html += '</div>'
             
             st.markdown(timeline_html, unsafe_allow_html=True)
-            st.markdown("<div style='margin-top:15px; color:#94a3b8; font-size:0.8rem;'>AI estimated arrangement.</div>", unsafe_allow_html=True)
+            st.markdown("<div style='margin-top:15px; color:#94a3b8; font-size:0.8rem;'>AI estimated arrangement based on energy shifts.</div>", unsafe_allow_html=True)
             st.markdown('</div>', unsafe_allow_html=True)
 
         st.markdown('<div class="panel-title" style="margin-left:5px">📈 STRUCTURAL DYNAMICS</div>', unsafe_allow_html=True)
@@ -452,10 +453,7 @@ def main():
                 ["Original Analysis", "More Energetic", "Darker / Moody", "Cinematic / Epic", "80s Retro", "Acoustic / Stripped", "Lofi / Chill", "Heavy / Aggressive"]
             )
         with rc2:
-            custom_intent = st.text_input(
-                "Or type custom intent...", 
-                placeholder="e.g. 'Cyberpunk chase scene with female vocals'"
-            )
+            custom_intent = st.text_input("Or type custom intent...", placeholder="e.g. 'Cyberpunk chase scene'")
         
         final_intent = custom_intent if custom_intent else intent_preset
         
